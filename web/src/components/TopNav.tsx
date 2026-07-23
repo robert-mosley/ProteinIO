@@ -1,11 +1,15 @@
 import React from 'react'
-import { Search, Settings } from 'lucide-react'
+import { Search, Dna, Loader2, Command } from 'lucide-react'
 
-type Props = { onSearch: (q: string) => void }
+type Props = {
+  onSearch: (q: string) => void
+  currentQuery: string | null
+}
 
-export default function TopNav({ onSearch }: Props) {
+export default function TopNav({ onSearch, currentQuery }: Props) {
   const [q, setQ] = React.useState('')
   const [isLoading, setIsLoading] = React.useState(false)
+  const inputRef = React.useRef<HTMLInputElement>(null)
 
   const handleSearch = React.useCallback(async () => {
     const query = q.trim()
@@ -19,54 +23,76 @@ export default function TopNav({ onSearch }: Props) {
   }, [q, onSearch])
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && !isLoading) {
-      handleSearch()
-    }
+    if (e.key === 'Enter' && !isLoading) handleSearch()
+    if (e.key === 'Escape') inputRef.current?.blur()
   }
 
+  // Global keyboard shortcut: Cmd/Ctrl+K to focus search
+  React.useEffect(() => {
+    const down = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault()
+        inputRef.current?.focus()
+      }
+    }
+    window.addEventListener('keydown', down)
+    return () => window.removeEventListener('keydown', down)
+  }, [])
+
   return (
-    <nav className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950">
-      {/* Logo and tagline */}
-      <div className="flex items-center gap-3 min-w-fit">
-        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-600 to-indigo-700 flex items-center justify-center">
-          <span className="text-white font-bold">P</span>
+    <nav className="flex items-center gap-4 px-5 py-3 border-b border-[#0f2040] bg-[#080e1a]/95 backdrop-blur-sm sticky top-0 z-50">
+      {/* Logo */}
+      <div className="flex items-center gap-2.5 min-w-fit">
+        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-cyan-500/20">
+          <Dna className="w-4 h-4 text-white" />
         </div>
         <div>
-          <div className="font-semibold text-base text-slate-900 dark:text-slate-100">ProteinIO</div>
-          <div className="text-xs text-slate-500 hidden sm:block">Research Workspace</div>
+          <div className="font-bold text-sm text-white tracking-wide">ProteinIO</div>
+          <div className="text-[10px] text-cyan-500/70 font-mono tracking-widest uppercase hidden sm:block">Research Workspace</div>
         </div>
       </div>
 
-      {/* Search bar */}
-      <div className="flex-1 mx-8 max-w-2xl">
-        <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg px-4 py-2.5 focus-within:border-indigo-400 dark:focus-within:border-indigo-600 transition">
-          <Search className="w-4 h-4 text-slate-400 flex-shrink-0" />
+      {/* Search */}
+      <div className="flex-1 max-w-2xl mx-auto">
+        <div className="flex items-center gap-2 bg-[#0d1b30] border border-[#1a3355] rounded-xl px-3.5 py-2 focus-within:border-cyan-500/50 focus-within:shadow-[0_0_0_1px_rgba(6,182,212,0.2)] transition-all duration-150">
+          {isLoading
+            ? <Loader2 className="w-4 h-4 text-cyan-400 flex-shrink-0 animate-spin" />
+            : <Search className="w-4 h-4 text-slate-500 flex-shrink-0" />
+          }
           <input
+            ref={inputRef}
             value={q}
             onChange={(e) => setQ(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Search by accession, name, or gene..."
-            className="w-full bg-transparent outline-none text-sm text-slate-900 dark:text-slate-100 placeholder-slate-500 dark:placeholder-slate-400"
+            placeholder="Search by gene, accession, or protein name…"
+            className="w-full bg-transparent outline-none text-sm text-slate-200 placeholder-slate-600 min-w-0"
           />
+          {q && (
+            <button
+              onClick={() => setQ('')}
+              className="text-slate-600 hover:text-slate-400 transition text-xs px-1"
+            >✕</button>
+          )}
+          <div className="flex items-center gap-1 flex-shrink-0 hidden sm:flex">
+            <kbd className="px-1.5 py-0.5 rounded bg-[#0a1628] border border-[#1a3355] text-[10px] text-slate-500 font-mono">⌘K</kbd>
+          </div>
           <button
             onClick={handleSearch}
             disabled={!q.trim() || isLoading}
-            className="px-3 py-1.5 rounded-md bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed transition"
+            className="px-3 py-1.5 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-[#080e1a] text-xs font-bold disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-150 flex-shrink-0"
           >
-            {isLoading ? 'Searching...' : 'Search'}
+            Search
           </button>
         </div>
       </div>
 
-      {/* Right actions */}
-      <div className="flex items-center gap-1">
-        <button
-          title="Settings"
-          className="p-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900 transition"
-        >
-          <Settings className="w-5 h-5" />
-        </button>
-      </div>
+      {/* Status badge */}
+      {currentQuery && (
+        <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#0d1b30] border border-[#1a3355] text-xs text-slate-400 font-mono max-w-[180px]">
+          <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 flex-shrink-0 animate-pulse" />
+          <span className="truncate">{currentQuery}</span>
+        </div>
+      )}
     </nav>
   )
 }

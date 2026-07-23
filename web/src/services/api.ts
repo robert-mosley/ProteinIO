@@ -1,6 +1,6 @@
 import { ProteinResponse } from '../types'
 
-const API_BASE = 'http://localhost:8000'
+const API_BASE = '/api'
 
 class APIError extends Error {
   constructor(public status: number, message: string) {
@@ -16,14 +16,14 @@ export async function fetchProtein(query: string): Promise<ProteinResponse> {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ query })
     })
-    
+
     if (!res.ok) {
       if (res.status === 404) {
         throw new APIError(404, `Protein "${query}" not found`)
       }
       throw new APIError(res.status, 'Failed to fetch protein')
     }
-    
+
     return res.json()
   } catch (error) {
     if (error instanceof APIError) throw error
@@ -38,11 +38,11 @@ export async function postChat(message: string): Promise<{ response: string }> {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ message })
     })
-    
+
     if (!res.ok) {
       throw new APIError(res.status, 'Failed to send chat message')
     }
-    
+
     return res.json()
   } catch (error) {
     if (error instanceof APIError) throw error
