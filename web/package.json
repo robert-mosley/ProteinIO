@@ -1,0 +1,29 @@
+{
+  "name": "proteinio-web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "^4.37.0",
+    "lucide-react": "^0.264.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-markdown": "^8.0.7",
+    "react-router-dom": "^6.14.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.3",
+    "@types/react": "^18.2.21",
+    "@types/react-dom": "^18.2.7",
+    "@vitejs/plugin-react": "5.2.0",
+    "autoprefixer": "^10.4.14",
+    "postcss": "^8.4.30",
+    "tailwindcss": "^4.3.0",
+    "typescript": "^5.2.2",
+    "vite": "^5.0.0"
+  }
+}
