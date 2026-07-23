@@ -54,7 +54,7 @@ export default function StructuresTab({ query }: { query: string | null }) {
 
   return (
     <div className="space-y-3 fade-in">
-      <div className="text-xs text-slate-500">
+      <div className="text-xs text-slate-300">
         <span className="text-cyan-400 font-bold font-mono">{structures.length}</span> structure{structures.length !== 1 ? 's' : ''} from RCSB PDB
       </div>
 
@@ -67,7 +67,7 @@ export default function StructuresTab({ query }: { query: string | null }) {
                 {s.method}
               </span>
             </div>
-            <p className="text-xs text-slate-400 leading-relaxed line-clamp-3">{s.title}</p>
+            <p className="text-xs text-slate-200 leading-relaxed line-clamp-3">{s.title}</p>
           </div>
 
           <div className="flex gap-2 px-4 pb-4">
@@ -83,7 +83,7 @@ export default function StructuresTab({ query }: { query: string | null }) {
             <a
               href={s.download_url}
               download
-              className="flex-1 px-3 py-2 rounded-lg bg-[#0a1628] hover:bg-[#0d1b30] border border-[#1a3355] hover:border-[#2a4a6e] text-slate-400 hover:text-slate-200 text-xs font-medium flex items-center justify-center gap-1.5 transition-all"
+              className="flex-1 px-3 py-2 rounded-lg bg-[#0a1628] hover:bg-[#0d1b30] border border-[#1a3355] hover:border-[#2a4a6e] text-white hover:text-white text-xs font-medium flex items-center justify-center gap-1.5 transition-all"
             >
               <Download className="w-3.5 h-3.5" />
               Download PDB

@@ -53,13 +53,13 @@ export default function ProteinTab({ query }: { query: string | null }) {
     <div className="space-y-5 fade-in">
       {/* Name */}
       <div className="rounded-xl border border-[#1a3355] bg-[#0d1829] p-4">
-        <div className="text-[10px] uppercase tracking-widest font-semibold text-slate-600 mb-2">Protein Name</div>
+        <div className="text-[10px] uppercase tracking-widest font-semibold text-slate-400 mb-2">Protein Name</div>
         <div className="font-medium text-slate-200 text-sm leading-relaxed">{p.name}</div>
       </div>
 
       {/* Accession */}
       <div className="rounded-xl border border-[#1a3355] bg-[#0d1829] p-4">
-        <div className="text-[10px] uppercase tracking-widest font-semibold text-slate-600 mb-2">Accession</div>
+        <div className="text-[10px] uppercase tracking-widest font-semibold text-slate-400 mb-2">Accession</div>
         <div className="flex items-center gap-2">
           <code className="flex-1 px-3 py-2 bg-[#080e1a] border border-[#1a3355] rounded-lg text-sm font-mono text-cyan-300">
             {p.accession}
@@ -76,23 +76,23 @@ export default function ProteinTab({ query }: { query: string | null }) {
 
       {/* Sequence length */}
       <div className="rounded-xl border border-[#1a3355] bg-[#0d1829] p-4">
-        <div className="text-[10px] uppercase tracking-widest font-semibold text-slate-600 mb-2">Sequence Length</div>
+        <div className="text-[10px] uppercase tracking-widest font-semibold text-slate-400 mb-2">Sequence Length</div>
         <div className="text-2xl font-bold font-mono text-cyan-400">{p.length.toLocaleString()}</div>
-        <div className="text-xs text-slate-600 mt-0.5">amino acids</div>
+        <div className="text-xs text-slate-300 mt-0.5">amino acids</div>
       </div>
 
       {/* Sequence */}
       <div className="rounded-xl border border-[#1a3355] bg-[#0d1829] p-4">
         <div className="flex items-center justify-between mb-3">
-          <div className="text-[10px] uppercase tracking-widest font-semibold text-slate-600">Sequence</div>
+          <div className="text-[10px] uppercase tracking-widest font-semibold text-slate-400">Sequence</div>
           <button
             onClick={() => copyToClipboard(p.sequence, 'sequence')}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#0a1628] border border-[#1a3355] hover:border-[#2a4a6e] transition text-xs text-slate-500 hover:text-slate-300"
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#0a1628] border border-[#1a3355] hover:border-[#2a4a6e] transition text-xs text-slate-300 hover:text-white"
           >
             {copied === 'sequence' ? <><Check className="w-3 h-3 text-emerald-400" /> Copied</> : <><Copy className="w-3 h-3" /> Copy</>}
           </button>
         </div>
-        <pre className="p-3 bg-[#080e1a] border border-[#1a3355] rounded-lg text-[11px] font-mono text-slate-400 overflow-auto max-h-52 leading-6 tracking-wider">
+        <pre className="p-3 bg-[#080e1a] border border-[#1a3355] rounded-lg text-[11px] font-mono text-slate-200 overflow-auto max-h-52 leading-6 tracking-wider">
           {proteinService.formatSequence(p.sequence)}
         </pre>
       </div>

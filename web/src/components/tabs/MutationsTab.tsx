@@ -103,7 +103,7 @@ function MutationCard({ m }: { m: Mutation }) {
 
       {/* Card footer */}
       <div className="flex items-center gap-2 px-3.5 py-2 border-t border-[#0f2040] bg-[#080e1a]/40">
-        <span className="text-[10px] font-mono text-slate-600 flex-1 truncate" title={m.accession}>
+        <span className="text-[10px] font-mono text-slate-300 flex-1 truncate" title={m.accession}>
           {m.accession || '—'}
         </span>
         <a
@@ -136,9 +136,9 @@ export default function MutationsTab({ query }: { query: string | null }) {
     return (
       <div className="flex flex-col items-center justify-center py-12 gap-3 text-center">
         <div className="w-12 h-12 rounded-full border border-dashed border-[#1a3355] flex items-center justify-center">
-          <Dna className="w-6 h-6 text-slate-700" />
+          <Dna className="w-6 h-6 text-slate-500" />
         </div>
-        <div className="text-sm text-slate-600">Search for a protein to view its mutations</div>
+        <div className="text-sm text-slate-300">Search for a protein to view its mutations</div>
       </div>
     )
   }
@@ -161,18 +161,18 @@ export default function MutationsTab({ query }: { query: string | null }) {
     <div className="space-y-3">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div className="text-xs text-slate-500">
+        <div className="text-xs text-slate-300">
           <span className="text-cyan-400 font-bold font-mono">{all.length}</span>
           {' '}mutation{all.length !== 1 ? 's' : ''} from ClinVar
         </div>
         {filter && items.length !== all.length && (
-          <div className="text-[10px] text-slate-600">{items.length} matching</div>
+          <div className="text-[10px] text-slate-300">{items.length} matching</div>
         )}
       </div>
 
       {/* Filter */}
       <div className="relative">
-        <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-600 pointer-events-none" />
+        <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
         <input
           className="w-full pl-8 pr-3 py-2 rounded-lg bg-[#0d1b30] border border-[#1a3355] text-xs text-white placeholder-slate-700 focus:border-cyan-500/40 focus:outline-none transition font-mono"
           placeholder="Filter by name, accession, gene…"

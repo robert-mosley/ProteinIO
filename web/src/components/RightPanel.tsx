@@ -32,7 +32,7 @@ export default function RightPanel({ proteinQuery }: Props) {
             className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-2 rounded-t-lg text-xs font-medium transition-all duration-150 relative ${
               tab === t.id
                 ? 'bg-[#0d1b30] text-white border border-b-0 border-[#1a3355]'
-                : 'text-slate-600 hover:text-slate-400'
+                : 'text-slate-400 hover:text-white'
             }`}
           >
             {t.icon}

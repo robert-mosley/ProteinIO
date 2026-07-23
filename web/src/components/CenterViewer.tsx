@@ -12,7 +12,7 @@ export default function CenterViewer({ query }: { query?: string | null }) {
             <div className="w-3 h-3 rounded-full bg-[#1a3355]" />
             <div className="w-3 h-3 rounded-full bg-[#1a3355]" />
           </div>
-          <div className="text-xs text-slate-600 font-mono">
+          <div className="text-xs text-slate-400 font-mono">
             {query ? `mol* · ${query}` : 'mol* · no selection'}
           </div>
           {query && (
@@ -33,10 +33,10 @@ export default function CenterViewer({ query }: { query?: string | null }) {
           </div>
 
           <div>
-            <div className="text-sm font-medium text-slate-500 mb-1">
+            <div className="text-sm font-medium text-white mb-1">
               {query ? `Loading structure for "${query}"` : 'Mol* 3D Viewer'}
             </div>
-            <div className="text-xs text-slate-700 max-w-xs">
+            <div className="text-xs text-slate-300 max-w-xs">
               {query
                 ? 'Select a PDB structure from the Structures tab to visualize it here'
                 : 'Search for a protein above to begin exploring its structure, mutations, and sequence data'}
@@ -46,7 +46,7 @@ export default function CenterViewer({ query }: { query?: string | null }) {
           {!query && (
             <div className="flex flex-wrap gap-2 justify-center mt-2">
               {['BRCA1', 'TP53', 'EGFR', 'KRAS', 'MSH6'].map((example) => (
-                <span key={example} className="px-2.5 py-1 rounded-lg bg-[#0d1b30] border border-[#1a3355] text-xs font-mono text-slate-500">
+                <span key={example} className="px-2.5 py-1 rounded-lg bg-[#0d1b30] border border-[#1a3355] text-xs font-mono text-slate-300">
                   {example}
                 </span>
               ))}
