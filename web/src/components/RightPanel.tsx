@@ -29,9 +29,9 @@ export default function RightPanel({ proteinQuery }: Props) {
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-t-lg text-xs font-medium transition-all duration-150 relative ${
+            className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-2 rounded-t-lg text-xs font-medium transition-all duration-150 relative ${
               tab === t.id
-                ? 'bg-[#0d1b30] text-cyan-400 border border-b-0 border-[#1a3355]'
+                ? 'bg-[#0d1b30] text-white border border-b-0 border-[#1a3355]'
                 : 'text-slate-600 hover:text-slate-400'
             }`}
           >

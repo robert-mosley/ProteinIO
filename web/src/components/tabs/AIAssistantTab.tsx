@@ -148,7 +148,7 @@ export default function AIAssistantTab() {
             placeholder="Ask about this protein… (Ctrl+Enter to send)"
             disabled={isLoading}
             rows={2}
-            className="flex-1 p-2.5 rounded-xl bg-[#0d1b30] border border-[#1a3355] text-xs text-slate-200 placeholder-slate-700 focus:border-cyan-500/40 focus:outline-none transition resize-none disabled:opacity-50"
+            className="flex-1 p-2.5 rounded-xl bg-[#0d1b30] border border-[#1a3355] text-xs text-white placeholder-slate-700 focus:border-cyan-500/40 focus:outline-none transition resize-none disabled:opacity-50"
           />
           <button
             onClick={handleSend}

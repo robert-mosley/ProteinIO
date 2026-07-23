@@ -174,7 +174,7 @@ export default function MutationsTab({ query }: { query: string | null }) {
       <div className="relative">
         <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-600 pointer-events-none" />
         <input
-          className="w-full pl-8 pr-3 py-2 rounded-lg bg-[#0d1b30] border border-[#1a3355] text-xs text-slate-300 placeholder-slate-700 focus:border-cyan-500/40 focus:outline-none transition font-mono"
+          className="w-full pl-8 pr-3 py-2 rounded-lg bg-[#0d1b30] border border-[#1a3355] text-xs text-white placeholder-slate-700 focus:border-cyan-500/40 focus:outline-none transition font-mono"
           placeholder="Filter by name, accession, gene…"
           value={filter}
           onChange={(e) => setFilter(e.target.value)}

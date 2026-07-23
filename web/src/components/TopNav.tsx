@@ -65,7 +65,7 @@ export default function TopNav({ onSearch, currentQuery }: Props) {
             onChange={(e) => setQ(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Search by gene, accession, or protein name…"
-            className="w-full bg-transparent outline-none text-sm text-slate-200 placeholder-slate-600 min-w-0"
+            className="w-full bg-transparent outline-none text-sm text-white placeholder-slate-600 min-w-0"
           />
           {q && (
             <button
