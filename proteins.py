@@ -17,8 +17,10 @@ class Structure:
 
 @dataclass
 class Mutation:
+    source: str
     accession: str
     title: str
+    clinical_significance: Optional[str] = None
 
 @dataclass
 class Protein:
@@ -43,9 +45,27 @@ class UniProtService:
 
         return data["results"][0]
 
+    def get_variants(self, protein: dict) -> list[Mutation]:
+        mutations = []
+        for feature in protein.get("features", []):
+
+            if feature.get("type") != "Natural variant":
+                continue
+
+            mutations.append(
+                Mutation(
+                    source="UniProt",
+                    accession=feature.get("featureId", ""),
+                    title=feature.get("description", ""),
+                    clinical_significance=None
+                )
+            )
+
+        return mutations
+
 
 class ClinVarService:
-    def search(self, gene: str) -> List[Mutation]:
+    def search(self, gene: str) -> list[Mutation]:
         response = requests.get(
             f"{NCBI_BASE}/esearch.fcgi",
             params={
@@ -56,10 +76,12 @@ class ClinVarService:
         )
 
         response.raise_for_status()
+
         ids = response.json()["esearchresult"]["idlist"]
+
         if not ids:
             return []
-        
+
         summary = requests.get(
             f"{NCBI_BASE}/esummary.fcgi",
             params={
@@ -68,12 +90,26 @@ class ClinVarService:
                 "retmode": "json"
             }
         )
+
         summary.raise_for_status()
+
         data = summary.json()
+
         mutations = []
+
         for uid in data["result"]["uids"]:
             item = data["result"][uid]
-            mutations.append(Mutation(accession=item.get("accession", ""),title=item.get("title", "")))
+
+            classification = item.get("germline_classification", {})
+
+            mutations.append(
+                Mutation(
+                    source="ClinVar",
+                    accession=item.get("accession", ""),
+                    title=item.get("title", ""),
+                    clinical_significance=classification.get("description")
+                )
+            )
 
         return mutations
 
@@ -111,18 +147,19 @@ class PDBService:
                 "type": "terminal",
                 "service": "text",
                 "parameters": {
-                    "attribute": "rcsb_entity_source_organism.rcsb_gene_name.value",
+                    "attribute": "rcsb_entry_container_identifiers.entry_id",
                     "operator": "exact_match",
                     "value": gene_name
                 }
             },
             "return_type": "entry"
         }
-
+        print(gene_name)
         response = requests.post(
             SEARCH_URL,
             json=query
         )
+
 
         response.raise_for_status()
 
@@ -161,8 +198,12 @@ class ProteinService:
                 )
             except Exception:
                 pass
+        gene_name = uniprot["genes"][0]["geneName"]["value"]
+        print(gene_name)
 
-        mutations = self.clinvar.search(query)
+        mutations = self.clinvar.search(gene_name)
+        mutations = self.uniprot.get_variants(uniprot)
+        print(mutations)
 
         return Protein(
             query=query,
