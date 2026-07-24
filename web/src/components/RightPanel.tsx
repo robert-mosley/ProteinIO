@@ -8,11 +8,24 @@ import { useProtein } from '../hooks/useProtein'
 
 type Tab = 'protein' | 'structures' | 'mutations' | 'ai'
 
-type Props = { proteinQuery: string | null }
+type Props = {
+  proteinQuery: string | null
+  setSelectedPdb: (url: string | null) => void
+}
 
-export default function RightPanel({ proteinQuery }: Props) {
+export default function RightPanel({ proteinQuery, setSelectedPdb }: Props) {
   const [tab, setTab] = React.useState<Tab>('protein')
   const { data } = useProtein(proteinQuery)
+
+  // Auto-load the first structure whenever results arrive for a new query
+  React.useEffect(() => {
+    if (data?.structures?.length) {
+      setSelectedPdb(data.structures[0].download_url)
+    } else if (data) {
+      // Data loaded but no structures
+      setSelectedPdb(null)
+    }
+  }, [data])
 
   const tabs: { id: Tab; label: string; icon: React.ReactNode; count?: number }[] = [
     { id: 'protein',    label: 'Protein',    icon: <Microscope className="w-3.5 h-3.5" /> },
@@ -55,7 +68,7 @@ export default function RightPanel({ proteinQuery }: Props) {
       <div className="flex-1 overflow-y-auto bg-[#0a1220] p-4">
         <div className="fade-in">
           {tab === 'protein'    && <ProteinTab    query={proteinQuery} />}
-          {tab === 'structures' && <StructuresTab query={proteinQuery} />}
+          {tab === 'structures' && <StructuresTab query={proteinQuery} setSelectedPdb={setSelectedPdb} />}
           {tab === 'mutations'  && <MutationsTab  query={proteinQuery} />}
           {tab === 'ai'         && <AIAssistantTab />}
         </div>

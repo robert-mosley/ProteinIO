@@ -64,3 +64,46 @@ button {
 }
 
 .rounded-card { border-radius: 12px; }
+
+/* ── Mol* viewer: dark button overrides ── */
+.msp-viewport-controls-buttons button,
+.msp-viewport-controls-buttons .msp-btn-link {
+  background: rgba(8, 17, 30, 0.85) !important;
+  border: 1px solid rgba(30, 58, 95, 0.8) !important;
+  border-radius: 6px !important;
+  color: #94a3b8 !important;
+  backdrop-filter: blur(4px);
+}
+
+.msp-viewport-controls-buttons button:hover,
+.msp-viewport-controls-buttons .msp-btn-link:hover {
+  background: rgba(13, 27, 48, 0.95) !important;
+  border-color: rgba(6, 182, 212, 0.4) !important;
+  color: #e2e8f0 !important;
+}
+
+.msp-viewport-controls-buttons .msp-btn-link-toggle-off {
+  color: #94a3b8 !important;
+}
+
+.msp-viewport-controls-buttons .msp-btn-link-toggle-on {
+  background: rgba(6, 182, 212, 0.15) !important;
+  border-color: rgba(6, 182, 212, 0.4) !important;
+  color: #22d3ee !important;
+}
+
+/* Viewport controls panel (dropdown when button is clicked) */
+.msp-viewport-controls-panel {
+  background: #0d1829 !important;
+  border: 1px solid #1a3355 !important;
+  border-radius: 8px !important;
+}
+
+/* Traj / snapshot controls */
+.msp-viewport-top-left-controls .msp-traj-controls,
+.msp-viewport-top-left-controls .msp-state-snapshot-viewport-controls > button {
+  background: rgba(8, 17, 30, 0.85) !important;
+  border: 1px solid rgba(30, 58, 95, 0.8) !important;
+  border-radius: 6px !important;
+  color: #94a3b8 !important;
+}

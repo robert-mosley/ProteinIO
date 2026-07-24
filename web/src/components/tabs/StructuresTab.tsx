@@ -14,7 +14,12 @@ function methodStyle(method: string): string {
   return METHOD_STYLES[method.toUpperCase()] || 'bg-slate-500/10 border-slate-500/30 text-slate-400'
 }
 
-export default function StructuresTab({ query }: { query: string | null }) {
+interface Props {
+  query: string | null
+  setSelectedPdb: (url: string | null) => void
+}
+
+export default function StructuresTab({ query, setSelectedPdb }: Props) {
   const { data, isLoading } = useProtein(query)
   const structures = data?.structures || []
 
@@ -71,15 +76,13 @@ export default function StructuresTab({ query }: { query: string | null }) {
           </div>
 
           <div className="flex gap-2 px-4 pb-4">
-            <a
-              href={`https://www.rcsb.org/structure/${s.id}`}
-              target="_blank"
-              rel="noopener noreferrer"
+            <button
+              onClick={() => setSelectedPdb(s.download_url)}
               className="flex-1 px-3 py-2 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/20 hover:border-cyan-500/40 text-cyan-400 text-xs font-medium flex items-center justify-center gap-1.5 transition-all"
             >
               <ExternalLink className="w-3.5 h-3.5" />
-              View in RCSB
-            </a>
+              Open Viewer
+            </button>
             <a
               href={s.download_url}
               download
