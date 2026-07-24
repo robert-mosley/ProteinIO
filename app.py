@@ -1,3 +1,4 @@
+import dataclasses
 from fastapi import FastAPI
 from pydantic import BaseModel
 from proteins import *
@@ -31,7 +32,7 @@ async def get_protein(protein: ProteinQuery):
             "length": protein.uniprot["sequence"]["length"],
         },
         "structures": protein.structures,
-        "mutations": protein.mutations,
+        "mutations": [dataclasses.asdict(m) for m in protein.mutations],
     }
 """
 @app.get("/chat")

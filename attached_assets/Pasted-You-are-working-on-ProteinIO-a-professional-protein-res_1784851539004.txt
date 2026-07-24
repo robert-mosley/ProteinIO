@@ -1,0 +1,187 @@
+You are working on ProteinIO, a professional protein research platform.
+
+The backend already exists. Do NOT rewrite the backend. Read it and use the API exactly as it is.
+
+The backend exposes:
+
+POST /getProtein
+
+Request:
+
+{
+    "query": "EGFR"
+}
+
+Response:
+
+{
+    "protein": {
+        "accession": "...",
+        "name": "...",
+        "sequence": "...",
+        "length": ...
+    },
+    "structures": [
+        {
+            "id": "...",
+            "title": "...",
+            "method": "...",
+            "download_url": "..."
+        }
+    ],
+    "mutations": [
+        {
+            "source": "...",
+            "accession": "...",
+            "title": "...",
+            "clinical_significance": "..."
+        }
+    ]
+}
+
+Your first job is to FIX the frontend so it correctly consumes this API.
+
+Do NOT mock data.
+
+Do NOT hardcode mutations.
+
+Do NOT create fake protein information.
+
+If the backend returns an empty mutations array, show an empty state instead of fake cards.
+
+------------------------------------------------------------
+
+Mutation Tab
+
+Update the mutations tab to use the backend response.
+
+Every mutation card should display
+
+• title
+• accession
+• source
+• clinical significance (if present)
+
+Cards should be searchable.
+
+Cards should be selectable.
+
+Cards should have hover animations.
+
+Cards should look modern but professional.
+
+------------------------------------------------------------
+
+Mutation Workspace
+
+When a mutation card is DOUBLE CLICKED,
+
+open a Mutation Workspace.
+
+Do NOT navigate away.
+
+Use either
+
+• a drawer
+• modal
+• right side panel
+
+The workspace should display
+
+Mutation
+
+Source
+
+Accession
+
+Clinical significance
+
+Description (title)
+
+and a placeholder section called
+
+"AI Analysis"
+
+that currently says
+
+"Prediction models will be available in a future release."
+
+Do NOT fabricate biology.
+
+------------------------------------------------------------
+
+Structure Integration
+
+If a Mol* viewer is present,
+
+highlight the selected mutation if possible.
+
+If highlighting is not possible,
+
+display
+
+"Residue highlighting coming soon."
+
+Do not invent residue positions.
+
+------------------------------------------------------------
+
+Backend Bug Investigation
+
+Carefully inspect how mutations are loaded.
+
+The frontend should never assume mutations exist.
+
+If mutations are empty,
+
+determine whether the backend is returning an empty array.
+
+Help identify where the backend may be failing.
+
+I suspect the issue is one of these:
+
+• UniProt search response does not contain "features"
+• ClinVar gene lookup returns nothing
+• Protein identifiers are being confused with gene identifiers
+
+Do NOT rewrite the backend.
+
+Only point out exactly where the issue is.
+
+------------------------------------------------------------
+
+UI
+
+Maintain the existing design language.
+
+Dark mode.
+
+Rounded cards.
+
+Subtle shadows.
+
+Smooth transitions.
+
+Scientific aesthetic.
+
+Not glassmorphism.
+
+Not neon.
+
+Professional enough that it could be shown to biology researchers.
+
+------------------------------------------------------------
+
+Code Quality
+
+Do not rewrite unrelated components.
+
+Reuse existing hooks.
+
+Reuse existing API functions.
+
+Use TypeScript correctly.
+
+Avoid duplicated code.
+
+Only change what is necessary.

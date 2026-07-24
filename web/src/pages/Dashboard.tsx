@@ -9,10 +9,12 @@ const MAX_HISTORY = 10
 export default function Dashboard() {
   const [query, setQuery] = React.useState<string | null>(null)
   const [history, setHistory] = React.useState<string[]>([])
+  const [selectedPdb, setSelectedPdb] = React.useState<string | null>(null)
 
   function handleSearch(q: string) {
     const val = q.trim() || null
     setQuery(val)
+    setSelectedPdb(null)
     if (val) {
       setHistory((prev) => {
         const filtered = prev.filter((h) => h.toLowerCase() !== val.toLowerCase())
@@ -26,8 +28,8 @@ export default function Dashboard() {
       <TopNav onSearch={handleSearch} currentQuery={query} />
       <div className="flex flex-1 overflow-hidden">
         <LeftSidebar history={history} onSelectHistory={handleSearch} />
-        <CenterViewer query={query} />
-        <RightPanel proteinQuery={query} />
+        <CenterViewer query={query} selectedPdb={selectedPdb} />
+        <RightPanel proteinQuery={query} setSelectedPdb={setSelectedPdb} />
       </div>
     </div>
   )

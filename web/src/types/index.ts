@@ -22,8 +22,10 @@ export interface Structure {
  * Known mutation information
  */
 export interface Mutation {
+  source: string
   accession: string
   title: string
+  clinical_significance: string | null
 }
 
 /**
