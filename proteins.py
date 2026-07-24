@@ -145,14 +145,16 @@ class PDBService:
         query = {
             "query": {
                 "type": "terminal",
-                "service": "text",
+                "service": "full_text",
                 "parameters": {
-                    "attribute": "rcsb_entry_container_identifiers.entry_id",
-                    "operator": "exact_match",
                     "value": gene_name
                 }
             },
-            "return_type": "entry"
+            "return_type": "entry",
+            "request_options": {
+                "results_verbosity": "minimal",
+                "paginate": {"start": 0, "rows": 10}
+            }
         }
         print(gene_name)
         response = requests.post(
@@ -160,6 +162,9 @@ class PDBService:
             json=query
         )
 
+        # RCSB returns 204 No Content when there are no results
+        if response.status_code == 204 or not response.text.strip():
+            return []
 
         response.raise_for_status()
 
@@ -202,7 +207,6 @@ class ProteinService:
         print(gene_name)
 
         mutations = self.clinvar.search(gene_name)
-        mutations = self.uniprot.get_variants(uniprot)
         print(mutations)
 
         return Protein(
