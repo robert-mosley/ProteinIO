@@ -9,15 +9,25 @@ type PluginContext = Awaited<ReturnType<typeof createPluginUI>>
 
 async function loadStructure(plugin: PluginContext, url: string) {
   try {
-    await plugin.clear()
+    const response = await fetch(url);
+
+    console.log("status", response.status);
+    console.log("content-type", response.headers.get("content-type"));
+
+    const text = await response.text();
+    console.log(text.substring(0, 200));
     const data = await plugin.builders.data.download(
       { url, isBinary: false },
       { state: { isGhost: true } }
-    )
-    const trajectory = await plugin.builders.structure.parseTrajectory(data, 'pdb')
-    await plugin.builders.structure.hierarchy.applyPreset(trajectory, 'default')
+    );
+
+    const trajectory = await plugin.builders.structure.parseTrajectory(data, "pdb");
+    console.log("Parsed");
+
+    await plugin.builders.structure.hierarchy.applyPreset(trajectory, "default");
+    console.log("Applied");
   } catch (e) {
-    console.error('[ProteinViewer] Failed to load structure:', e)
+    console.error(e);
   }
 }
 

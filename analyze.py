@@ -1,6 +1,10 @@
 import sqlite3
 from esm.sdk.api import ESMProtein, GenerationConfig
-from esm.models.esmc import ESMC
+from esm.models.esm3 import ESM3
+import torch
+
+pd_model = ESM3.from_pretrained("esm3_sm_open_v1")
+print("model_loaded")
 
 class AlphaMissenseService():
     def __init__(self):
@@ -25,7 +29,7 @@ AND protein_variant = ?
 
 class ESMService():
     def __init__(self):
-        self.model = ESMC.from_pretrained("esmc_300m")
+        self.model = ESM3.from_pretrained("esm3_sm_open_v1")
 
     def mutation(self, sequence, index, mut):
         protein = ESMProtein(sequence=sequence)
@@ -42,17 +46,30 @@ class ESMService():
 
         return {"llr": llr}
 
-class ProteinDesign():
-    def __init__(self):
-        self.model = ESMC.from_pretrained("esm3_sm_open_v1")
+from esm.sdk.api import ESMProtein, GenerationConfig
+from esm.models.esm3 import ESM3
 
+class ProteinDesign():
     def protein_generation(self, sequence):
         protein = ESMProtein(sequence=sequence)
         config = GenerationConfig(temperature=0.7, top_p=0.9)
-        designed_protein = self.model.generate(protein, config)
+        designed_protein = pd_model.generate(protein, config)
         return designed_protein.sequence
-
     def generate_structure(self, sequence):
         protein = ESMProtein(sequence=sequence)
-        predicted_protein = self.model.infer_structure(protein)
-        return predicted_protein.to_pdb()
+
+        # Mask structure so ESM3 predicts it
+        protein.coordinates = None
+
+        config = GenerationConfig(
+            track="structure",
+            num_steps=max(1, len(sequence) // 8),
+            temperature=0.7,
+        )
+
+        predicted_protein = pd_model.generate(
+            protein,
+            config
+        )
+
+        return predicted_protein.to_pdb("mutant.pdb")

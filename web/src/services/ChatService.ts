@@ -1,11 +1,17 @@
 import { ChatResponse } from '../types'
 import { postChat as apiPostChat, APIError } from './api'
+import { sessionId } from './SessionService'
 
 export interface ChatMessage {
   id: string
   role: 'user' | 'assistant'
   content: string
   timestamp: number
+}
+
+interface Props {
+  query: string | null
+  setSelectedPdb: (url: string | null) => void
 }
 
 export class ChatService {
@@ -18,8 +24,8 @@ export class ChatService {
     }
 
     try {
-      const response = await apiPostChat(message.trim())
-      return response.response
+      const response = await apiPostChat(message.trim(), sessionId)
+      return response
     } catch (error) {
       if (error instanceof APIError) {
         if (error.status >= 500) {

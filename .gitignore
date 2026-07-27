@@ -1,2 +1,5 @@
 RFdiffusion/
 .env
+venv/
+alphamissense.db
+AlphaMissense_aa_substitutions.tsv.gz

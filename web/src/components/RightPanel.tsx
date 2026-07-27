@@ -70,7 +70,7 @@ export default function RightPanel({ proteinQuery, setSelectedPdb }: Props) {
           {tab === 'protein'    && <ProteinTab    query={proteinQuery} />}
           {tab === 'structures' && <StructuresTab query={proteinQuery} setSelectedPdb={setSelectedPdb} />}
           {tab === 'mutations'  && <MutationsTab  query={proteinQuery} />}
-          {tab === 'ai'         && <AIAssistantTab />}
+          {tab === 'ai'         && <AIAssistantTab setSelectedPdb={setSelectedPdb}/>}
         </div>
       </div>
     </aside>

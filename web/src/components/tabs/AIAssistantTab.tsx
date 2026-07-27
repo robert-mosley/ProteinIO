@@ -10,7 +10,11 @@ interface Message {
   timestamp: number
 }
 
-export default function AIAssistantTab() {
+interface Props {
+  setSelectedPdb: (url: string | null) => void
+}
+
+export default function AIAssistantTab({ setSelectedPdb }: Props) {
   const [messages, setMessages] = React.useState<Message[]>([])
   const [input, setInput] = React.useState('')
   const [isLoading, setIsLoading] = React.useState(false)
@@ -38,10 +42,13 @@ export default function AIAssistantTab() {
 
     try {
       const response = await chatService.sendMessage(message)
+      if (response.pdb === "yes") {
+        setSelectedPdb("http://10.0.0.19:8000/pdb")
+      }
       setMessages((prev) => [...prev, {
         id: chatService.generateMessageId(),
         role: 'assistant',
-        content: response,
+        content: response.response,
         timestamp: Date.now(),
       }])
     } catch (err) {

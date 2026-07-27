@@ -31,12 +31,12 @@ export async function fetchProtein(query: string): Promise<ProteinResponse> {
   }
 }
 
-export async function postChat(message: string): Promise<{ response: string }> {
+export async function postChat(message: string, sessionId: string): Promise<{ response: string }> {
   try {
     const res = await fetch(`${API_BASE}/chat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message })
+      body: JSON.stringify({ "query": message, "session_id": sessionId })
     })
 
     if (!res.ok) {

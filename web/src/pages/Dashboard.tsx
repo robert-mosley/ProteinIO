@@ -3,6 +3,7 @@ import TopNav from '../components/TopNav'
 import LeftSidebar from '../components/LeftSidebar'
 import CenterViewer from '../components/CenterViewer'
 import RightPanel from '../components/RightPanel'
+import AIAssistantTab from '../components/tabs/AIAssistantTab'
 
 const MAX_HISTORY = 10
 
