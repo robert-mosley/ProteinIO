@@ -11,7 +11,6 @@ from dotenv import load_dotenv
 from generator import fold_protein
 from analyze import *
 from proteins import *
-from events import manager
 import asyncio
 import json
 
@@ -51,13 +50,14 @@ def queryProtein(query, session_id):
     Do not include explanations, markdown, or conversational text.
     """
 
-    prodes = ProteinDesign()
+    probes = ProteinDesign()
     fp = fold_protein()
     print(query)
     gen = fp.generate_protein(query)
+    pdb_string = probes.generate_structure(gen["sequence"])
+
     return {
         "sequence": gen["sequence"],
-        "family": gen["family"],
     }
 
 @tool
@@ -80,9 +80,7 @@ def protein_getter(query):
             "name": protein.uniprot["proteinDescription"]["recommendedName"]["fullName"]["value"],
             "sequence": protein.uniprot["sequence"]["value"],
             "length": protein.uniprot["sequence"]["length"],
-        },
-        "structures": structures,
-        "mutations": mutations,
+        }
     }
 
 tools = [protein_getter, queryProtein]
@@ -103,13 +101,11 @@ When clicked:
 - Apply the point mutation with PDBFixer.
 - Preserve the backbone.
 - Add missing atoms/hydrogens.
-- Run a short OpenMM energy minimization.
-- Return the mutant PDB and a short description of the mutation.
-- Automatically load the mutant PDB into the Mol* viewer.
 - Allow switching between the wild-type and mutant structures.
 - Handle residue numbering or chain mismatches gracefully with clear error messages.
 
-Do not use AI to generate the mutation. Use PDBFixer and OpenMM only."""),
+Do not use AI to generate the mutation. Use PDBFixer and OpenMM only.
+Don't write code just use your tools and give good responses"""),
         ] + state["messages"]
     )
     return {

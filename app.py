@@ -67,11 +67,14 @@ async def chat(question: ChatQuery):
 
     for msg in response["messages"]:
         for tool_call in getattr(msg, "tool_calls", []):
-            if tool_call["name"] == "my_tool_name":
+            print(tool_call)
+            if tool_call["name"] == "queryProtein":
                 called_my_tool = True
     result = response["messages"][-1].content
     if called_my_tool == True:
         pdb = "yes"
+    else:
+        pdb = "no"
     return {
         "response": result[0]["text"],
         "pdb": pdb
