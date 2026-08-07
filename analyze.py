@@ -2,8 +2,9 @@ import sqlite3
 from esm.sdk.api import ESMProtein, GenerationConfig
 from esm.models.esm3 import ESM3
 import torch
+import io
 
-pd_model = ESM3.from_pretrained("esm3_sm_open_v1")
+#pd_model = ESM3.from_pretrained("esm3_sm_open_v1")
 print("model_loaded")
 
 class AlphaMissenseService():
@@ -20,6 +21,9 @@ AND protein_variant = ?
 """, (uniprot_id, variant))
 
         row = cursor.fetchone()
+
+        cursor.close()
+        self.conn.close()
         return {
             "uniprot_id": row[0],
             "protein_variant": row[1],
@@ -58,7 +62,6 @@ class ProteinDesign():
     def generate_structure(self, sequence):
         protein = ESMProtein(sequence=sequence)
 
-        # Mask structure so ESM3 predicts it
         protein.coordinates = None
 
         config = GenerationConfig(
@@ -71,5 +74,7 @@ class ProteinDesign():
             protein,
             config
         )
-
-        return predicted_protein.to_pdb("mutant.pdb")
+        pdb_buffer = io.StringIO()
+        predicted_protein.to_pdb(pdb_buffer)
+        print(pdb_buffer.getvalue())
+        return pdb_buffer.getvalue()

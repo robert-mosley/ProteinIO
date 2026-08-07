@@ -110,6 +110,7 @@ export default function MutationsTab({ query }: { query: string | null }) {
   const { data, isLoading } = useProtein(query)
   const [filter, setFilter] = React.useState('')
   const [selectedId, setSelectedId] = React.useState<string | null>(null)
+  const [generatedPdb, setGeneratedPdb] = React.useState<string | null>(null);
   const [workspace, setWorkspace] = React.useState<Mutation | null>(null)
 
   const all: Mutation[] = data?.mutations ?? []

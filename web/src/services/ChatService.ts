@@ -18,7 +18,7 @@ export class ChatService {
   /**
    * Send a message to the AI assistant
    */
-  async sendMessage(message: string): Promise<string> {
+  async sendMessage(message: string): Promise<ChatResponse> {
     if (!message || !message.trim()) {
       throw new Error('Message cannot be empty')
     }

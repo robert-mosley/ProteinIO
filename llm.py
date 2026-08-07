@@ -1,4 +1,7 @@
 import os
+import tempfile
+import pandas as pd
+import httpx
 from langgraph.graph import StateGraph, START, END
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.messages import AnyMessage, SystemMessage, AIMessage, HumanMessage, ToolMessage
@@ -15,6 +18,7 @@ import asyncio
 import json
 
 CURRENT_SESSION = None
+pdb_string = None
 
 load_dotenv()
 app = FastAPI()
@@ -23,13 +27,124 @@ model = ChatGoogleGenerativeAI(
     temperature=0
 )
 
+async def resolve_pdb_text(pdb_value):
+    if not pdb_value:
+        return None
+
+    if isinstance(pdb_value, str) and pdb_value.startswith(("http://", "https://")):
+        async with httpx.AsyncClient(timeout=30) as client:
+            response = await client.get(pdb_value)
+            response.raise_for_status()
+            return response.text
+
+    return pdb_value
+
 class MessageState(TypedDict):
     messages: Annotated[list[AnyMessage], operator.add]
     llm_calls: int
     session_id: str
+    pockets: str | None
+    pdb: str | None
+    current_pdb: str | None
 
 @tool
-def queryProtein(query, session_id):
+async def predict_pockets(state: MessageState):
+    """Predict pockets in a protein structure using P2Rank. The protein should be already loaded in viewer assume it is."""
+    pdb_source = state.get("current_pdb") or state.get("pdb") or pdb_string
+    pdb_text = await resolve_pdb_text(pdb_source)
+    if not pdb_text:
+        raise ValueError("No protein structure is currently available for p2rank analysis.")
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        pdb_path = os.path.join(tmpdir, "protein.pdb")
+
+        with open(pdb_path, "w") as f:
+            f.write(pdb_text)
+
+        process = await asyncio.create_subprocess_exec(
+            "./prank.sh",
+            "predict",
+            "-f",
+            pdb_path,
+            "-o",
+            tmpdir,
+            cwd="/home/bobby/Projects/ProteinIO/p2rank"
+        )
+
+        await process.wait()
+
+        prediction_file = os.path.join(
+            tmpdir,
+            "protein.pdb_predictions.csv"
+        )
+        atom_count = pdb_text.count("ATOM")
+
+        if atom_count < 100:
+            raise ValueError(
+                "PDB appears incomplete. Please provide a full protein structure."
+            )
+
+        if not os.path.exists(prediction_file):
+            raise ValueError("P2Rank did not produce a prediction file.")
+
+        pockets_df = pd.read_csv(prediction_file)
+        print("Predicted pockets (raw):", pockets_df)
+        print(pdb_text[:500])
+
+        # Normalize column names and string values so downstream parsing is robust
+        raw_records = pockets_df.to_dict(orient="records")
+        cleaned_records = []
+        for rec in raw_records:
+            cleaned = {}
+            for k, v in rec.items():
+                if isinstance(k, str):
+                    nk = k.strip()
+                else:
+                    nk = k
+                if isinstance(v, str):
+                    nv = v.strip()
+                else:
+                    nv = v
+                cleaned[nk] = nv
+
+            # Normalize residue_ids spacing (e.g. " C_32 C_34" -> "C_32 C_34")
+            if "residue_ids" in cleaned and isinstance(cleaned["residue_ids"], str):
+                cleaned["residue_ids"] = " ".join(cleaned["residue_ids"].split())
+
+            cleaned_records.append(cleaned)
+
+        return {"pockets": cleaned_records}
+
+@tool
+async def searchProteinFromDisease(disease_name: str):
+    """search proteins by querying the disDenNet database for a given disease name and returning a list of associated proteins."""
+    BASE_URL = "https://api.platform.opentargets.org/api/v4/graphql"
+    query = """
+    query SearchDisease($name: String!) {
+        search(queryString: $name) {
+        hits {
+            id
+            name
+        }
+        }
+    }
+    """
+
+    async with httpx.AsyncClient(timeout=30) as client:
+        response = await client.post(
+            BASE_URL,
+            json={
+                "query": query,
+                "variables": {
+                    "name": disease_name
+                }
+            }
+        )
+
+    return response.json()
+
+@tool
+async def queryProtein(query, session_id):
     """
     Generate a novel protein from a natural language specification.
 
@@ -54,16 +169,19 @@ def queryProtein(query, session_id):
     fp = fold_protein()
     print(query)
     gen = fp.generate_protein(query)
+    global pdb_string
     pdb_string = probes.generate_structure(gen["sequence"])
 
     return {
         "sequence": gen["sequence"],
+        "pdb": pdb_string,
+        "current_pdb": pdb_string,
     }
 
 @tool
-def protein_getter(query):
+async def protein_getter(query):
     "Retrieve information about a certain protein such a structures information and mutations."
-    protein = ProteinService().search(query)
+    protein = await ProteinService().search(query)
     protein_info = protein.uniprot["primaryAccession"]
     structures = []
     mutations = []
@@ -83,7 +201,7 @@ def protein_getter(query):
         }
     }
 
-tools = [protein_getter, queryProtein]
+tools = [protein_getter, predict_pockets, searchProteinFromDisease]
 model_tools = model.bind_tools(tools)
 
 tools_by_name = {tool.name: tool for tool in tools}
@@ -92,34 +210,61 @@ tools_by_name = {tool.name: tool for tool in tools}
 async def ask_model_with_tools(state):
     response = await model_tools.ainvoke(
         [
-            SystemMessage(content="""Implement a mutation workspace for ProteinIO. Do not modify any unrelated files or redesign the application.
+            SystemMessage(content="""You are ProteinIO,
+an AI assistant for protein research.
 
-When the user selects a mutation (e.g. L858R), show a "Generate Mutant Structure" button.
+Help users understand proteins,
+mutations,
+protein structure,
+protein function,
+and experimental results.
 
-When clicked:
-- Use the currently loaded wild-type PDB.
-- Apply the point mutation with PDBFixer.
-- Preserve the backbone.
-- Add missing atoms/hydrogens.
-- Allow switching between the wild-type and mutant structures.
-- Handle residue numbering or chain mismatches gracefully with clear error messages.
+Do not fabricate scientific claims.
 
-Do not use AI to generate the mutation. Use PDBFixer and OpenMM only.
-Don't write code just use your tools and give good responses"""),
+Clearly distinguish predictions from verified biological knowledge.
+
+Use the available tools when appropriate.
+
+If uncertain,
+say you are uncertain."""),
         ] + state["messages"]
     )
     return {
         "messages": [response],
         "llm_calls": state.get("llm_calls", 0) + 1
     }
-async def tool_call(state: dict):
+async def tool_call(state: MessageState):
     result = []
+    pdb = state.get("pdb")  # Preserve existing value if there is one
+    current_pdb = state.get("current_pdb") or pdb or pdb_string
+    pockets = state.get("pockets")
+
     for tool_call in state["messages"][-1].tool_calls:
         tool = tools_by_name[tool_call["name"]]
+        print(tool)
         observation = await tool.ainvoke(tool_call["args"])
 
-        result.append(ToolMessage(content=json.dumps(observation), tool_call_id=tool_call["id"]))
-    return {"messages": result}
+        if isinstance(observation, dict):
+            if "pdb" in observation:
+                pdb = observation["pdb"]
+            if "current_pdb" in observation:
+                current_pdb = observation["current_pdb"]
+            if isinstance(observation.get("pockets"), list):
+                pockets = observation["pockets"]
+
+        result.append(
+            ToolMessage(
+                content=json.dumps(observation),
+                tool_call_id=tool_call["id"],
+            )
+        )
+
+    return {
+        "messages": result,
+        "pdb": pdb,
+        "current_pdb": current_pdb,
+        "pockets": pockets,
+    }
 
 async def should_continue(state: dict):
     messages = state["messages"]
@@ -127,7 +272,7 @@ async def should_continue(state: dict):
 
     if last_message.tool_calls:
         return "tool_node"
-    
+
     return END
 
 agent_graph = StateGraph(MessageState)

@@ -156,7 +156,7 @@ def apply_point_mutation(pdb_path, chain_id, position, old_residue, new_residue,
         "description": description,
     }
 
-
+"""
 if __name__ == "__main__":
     # Example usage matching your ClinVar mutation format (p.Lys1101Arg)
     result = apply_point_mutation(
@@ -168,4 +168,4 @@ if __name__ == "__main__":
     )
     print(result["description"])
     with open("mutant.pdb", "w") as f:
-        f.write(result["pdb_string"])
+        f.write(result["pdb_string"])"""

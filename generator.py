@@ -24,13 +24,15 @@ class fold_protein():
     def __init__(self):
         self.client = Client("robertthecreator/proteinIO")
     def generate_protein(self, protein_prompt):
+        """
         raw, seq = self.client.predict(
             protein_prompt,
             200,
             api_name="/generate_protein",
         )
 
-        raw = extract_sequence(raw)
+        raw = extract_sequence(raw)"""
+        raw = "MSKGEELFTGVVPILVELDGDVNGHKFSVRGEGEGDATNGKLTLKFICTTGKLPVPWPTLVTTLSYGVQCFSRYPDHMKQHDFFKSAMPEGYVQERTIFFKDDGNYKTRAEVKFEGDTLVNRIELKGIDFKEDGNILGHKLEYNYNSHNVYIMADKQKNGIKVNFKIRHNIEDGSVQLADHYQQNTPIGDGPVLLPDNHYLSTQSALSKDPNEKRDHMVLLEFVTAAGITHGMDELYK"
 
         return {
             "raw": raw,

@@ -23,6 +23,7 @@ export async function fetchProtein(query: string): Promise<ProteinResponse> {
       }
       throw new APIError(res.status, 'Failed to fetch protein')
     }
+    console.log("fetchProtein response", res);
 
     return res.json()
   } catch (error) {
@@ -31,7 +32,7 @@ export async function fetchProtein(query: string): Promise<ProteinResponse> {
   }
 }
 
-export async function postChat(message: string, sessionId: string): Promise<{ response: string }> {
+export async function postChat(message: string, sessionId: string): Promise<import('../types').ChatResponse> {
   try {
     const res = await fetch(`${API_BASE}/chat`, {
       method: 'POST',
@@ -44,6 +45,23 @@ export async function postChat(message: string, sessionId: string): Promise<{ re
     }
 
     return res.json()
+  } catch (error) {
+    if (error instanceof APIError) throw error
+    throw new APIError(0, `Network error: ${error instanceof Error ? error.message : 'Unknown error'}`)
+  }
+}
+
+export async function setCurrentPdb(pdb: string, sessionId: string): Promise<void> {
+  try {
+    const res = await fetch(`${API_BASE}/set_current_pdb`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pdb, session_id: sessionId })
+    })
+
+    if (!res.ok) {
+      throw new APIError(res.status, 'Failed to update current PDB')
+    }
   } catch (error) {
     if (error instanceof APIError) throw error
     throw new APIError(0, `Network error: ${error instanceof Error ? error.message : 'Unknown error'}`)

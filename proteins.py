@@ -1,3 +1,4 @@
+import httpx
 import requests
 from dataclasses import dataclass
 from typing import List, Dict, Optional
@@ -7,6 +8,7 @@ UNIPROT_URL = "https://rest.uniprot.org/uniprotkb/search"
 SEARCH_URL = "https://search.rcsb.org/rcsbsearch/v2/query"
 DETAIL_URL = "https://data.rcsb.org/rest/v1/core/entry"
 BASE = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
+current_pdb = None
 
 @dataclass
 class Structure:
@@ -30,12 +32,13 @@ class Protein:
     mutations: List[Mutation]
 
 class UniProtService:
-    def search(self, query):
-        response = requests.get(UNIPROT_URL, params={
-            "query": query,
-            "format": "json",
-            "size": 5
-        })
+    async def search(self, query):
+        async with httpx.AsyncClient() as client:
+            response = await client.get(UNIPROT_URL, params={
+                "query": query,
+                "format": "json",
+                "size": 5
+            }, timeout=20)
         response.raise_for_status()
 
         data = response.json()
@@ -45,7 +48,7 @@ class UniProtService:
 
         return data["results"][0]
 
-    def get_variants(self, protein: dict) -> list[Mutation]:
+    async def get_variants(self, protein: dict) -> list[Mutation]:
         mutations = []
         for feature in protein.get("features", []):
 
@@ -65,15 +68,17 @@ class UniProtService:
 
 
 class ClinVarService:
-    def search(self, gene: str) -> list[Mutation]:
-        response = requests.get(
-            f"{NCBI_BASE}/esearch.fcgi",
-            params={
-                "db": "clinvar",
-                "term": gene,
-                "retmode": "json"
-            }
-        )
+    async def search(self, gene: str) -> list[Mutation]:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                f"{NCBI_BASE}/esearch.fcgi",
+                params={
+                    "db": "clinvar",
+                    "term": gene,
+                    "retmode": "json"
+                },
+                timeout=20
+            )
 
         response.raise_for_status()
 
@@ -82,14 +87,16 @@ class ClinVarService:
         if not ids:
             return []
 
-        summary = requests.get(
-            f"{NCBI_BASE}/esummary.fcgi",
-            params={
-                "db": "clinvar",
-                "id": ",".join(ids[:20]),
-                "retmode": "json"
-            }
-        )
+        async with httpx.AsyncClient() as client:
+            summary = await client.get(
+                f"{NCBI_BASE}/esummary.fcgi",
+                params={
+                    "db": "clinvar",
+                    "id": ",".join(ids[:20]),
+                    "retmode": "json"
+                },
+                timeout=20
+            )
 
         summary.raise_for_status()
 
@@ -114,19 +121,20 @@ class ClinVarService:
         return mutations
 
 class Mutations:
-    def search(self, gene):
+    async def search(self, gene):
         params = {
             "db": "clinvar",
             "term": gene,
             "retmode": "json"
         }
 
-        r = requests.get(f"{BASE}/esearch.fcgi", params=params)
+        async with httpx.AsyncClient() as client:
+            r = await client.get(f"{BASE}/esearch.fcgi", params=params, timeout=20)
         r.raise_for_status()
 
         return r.json()["esearchresult"]["idlist"]
 
-    def fetch(self, ids):
+    async def fetch(self, ids):
         if not ids:
             return None
 
@@ -135,13 +143,14 @@ class Mutations:
             "id": ",".join(ids),
             "retmode": "xml"
         }
-        r = requests.get(f"{BASE}/efetch.fcgi", params=params)
+        async with httpx.AsyncClient() as client:
+            r = await client.get(f"{BASE}/efetch.fcgi", params=params, timeout=20)
         r.raise_for_status()
 
         return r.text
 
 class PDBService:
-    def search(self, gene_name: str):
+    async def search(self, gene_name: str):
         query = {
             "query": {
                 "type": "terminal",
@@ -157,10 +166,12 @@ class PDBService:
             }
         }
         print(gene_name)
-        response = requests.post(
-            SEARCH_URL,
-            json=query
-        )
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                SEARCH_URL,
+                json=query,
+                timeout=20
+            )
 
         # RCSB returns 204 No Content when there are no results
         if response.status_code == 204 or not response.text.strip():
@@ -175,8 +186,9 @@ class PDBService:
             for item in data.get("result_set", [])
         ]
 
-    def get_structure(self, pdb_id: str):
-        response = requests.get(f"{DETAIL_URL}/{pdb_id}")
+    async def get_structure(self, pdb_id: str):
+        async with httpx.AsyncClient() as client:
+            response = await client.get(f"{DETAIL_URL}/{pdb_id}", timeout=20)
         response.raise_for_status()
         data = response.json()
 
@@ -192,22 +204,22 @@ class ProteinService:
         self.clinvar = ClinVarService()
         self.pdb = PDBService()
 
-    def search(self, query) -> Protein:
-        uniprot = self.uniprot.search(query)
+    async def search(self, query) -> Protein:
+        uniprot = await self.uniprot.search(query)
         structures = []
-        pdb_ids = self.pdb.search(query)
+        pdb_ids = await self.pdb.search(query)
         for pdb_id in pdb_ids[:5]:
             try:
                 structures.append(
-                    self.pdb.get_structure(pdb_id)
+                    await self.pdb.get_structure(pdb_id)
                 )
             except Exception:
                 pass
-        gene_name = uniprot["genes"][0]["geneName"]["value"]
-        print(gene_name)
+        gene_name = None
+        if uniprot.get("genes"):
+            gene_name = uniprot["genes"][0]["geneName"]["value"]
 
-        mutations = self.clinvar.search(gene_name)
-        print(mutations)
+        mutations = await self.clinvar.search(gene_name)
 
         return Protein(
             query=query,

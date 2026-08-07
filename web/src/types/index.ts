@@ -42,6 +42,8 @@ export interface ProteinResponse {
  */
 export interface ChatResponse {
   response: string
+  generated_pdb?: string | null
+  pockets?: { chain: string; residue: number } | null
 }
 
 /**

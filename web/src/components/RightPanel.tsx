@@ -11,15 +11,18 @@ type Tab = 'protein' | 'structures' | 'mutations' | 'ai'
 type Props = {
   proteinQuery: string | null
   setSelectedPdb: (url: string | null) => void
+  setGeneratedPdb: (pdb: string | null) => void
+  setHighlight?: (highlight: { chain: string; residue: number } | null) => void
 }
 
-export default function RightPanel({ proteinQuery, setSelectedPdb }: Props) {
+export default function RightPanel({ proteinQuery, setSelectedPdb, setGeneratedPdb, setHighlight }: Props) {
   const [tab, setTab] = React.useState<Tab>('protein')
   const { data } = useProtein(proteinQuery)
 
   // Auto-load the first structure whenever results arrive for a new query
   React.useEffect(() => {
     if (data?.structures?.length) {
+      setGeneratedPdb(null)
       setSelectedPdb(data.structures[0].download_url)
     } else if (data) {
       // Data loaded but no structures
@@ -70,7 +73,7 @@ export default function RightPanel({ proteinQuery, setSelectedPdb }: Props) {
           {tab === 'protein'    && <ProteinTab    query={proteinQuery} />}
           {tab === 'structures' && <StructuresTab query={proteinQuery} setSelectedPdb={setSelectedPdb} />}
           {tab === 'mutations'  && <MutationsTab  query={proteinQuery} />}
-          {tab === 'ai'         && <AIAssistantTab setSelectedPdb={setSelectedPdb}/>}
+          {tab === 'ai'         && <AIAssistantTab setGeneratedPdb={setGeneratedPdb} setHighlight={setHighlight} />}
         </div>
       </div>
     </aside>

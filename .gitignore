@@ -1,5 +1,6 @@
 RFdiffusion/
 .env
 venv/
+p2rank/
 alphamissense.db
 AlphaMissense_aa_substitutions.tsv.gz

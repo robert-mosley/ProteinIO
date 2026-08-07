@@ -12,9 +12,17 @@ interface Message {
 
 interface Props {
   setSelectedPdb: (url: string | null) => void
+  setGeneratedPdb: (pdb: string | null) => void
+  setHighlight: (highlight: { chain: string; residue: number } | null) => void
 }
 
-export default function AIAssistantTab({ setSelectedPdb }: Props) {
+interface ChatResponse {
+  response: string
+  generated_pdb?: string | null
+  pockets?: { chain: string; residue: number } | null
+}
+
+export default function AIAssistantTab({ setSelectedPdb, setGeneratedPdb, setHighlight }: Props) {
   const [messages, setMessages] = React.useState<Message[]>([])
   const [input, setInput] = React.useState('')
   const [isLoading, setIsLoading] = React.useState(false)
@@ -42,9 +50,32 @@ export default function AIAssistantTab({ setSelectedPdb }: Props) {
 
     try {
       const response = await chatService.sendMessage(message)
-      if (response.pdb === "yes") {
-        setSelectedPdb("http://10.0.0.19:8000/pdb")
+      console.log('AI response:', response)
+      if (response?.generated_pdb) {
+        setGeneratedPdb(response.generated_pdb)
       }
+      if (response?.pockets) {
+        console.log('Highlighting pockets (raw):', response.pockets)
+        const chain = response.pockets.chain
+        const rawResidue = response.pockets.residue
+
+        let residueNumber: number | null = null
+        if (typeof rawResidue === 'number') {
+          residueNumber = rawResidue
+        } else if (typeof rawResidue === 'string') {
+          const m = rawResidue.match(/(-?\d+)/)
+          if (m) residueNumber = parseInt(m[0], 10)
+        }
+
+        if (chain && residueNumber && !Number.isNaN(residueNumber)) {
+          console.log('Setting highlight:', { chain, residue: residueNumber })
+          setHighlight({ chain, residue: residueNumber })
+        } else {
+          console.warn('Could not determine numeric residue from pockets:', response.pockets)
+          setHighlight(null)
+        }
+      }
+
       setMessages((prev) => [...prev, {
         id: chatService.generateMessageId(),
         role: 'assistant',

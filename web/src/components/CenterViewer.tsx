@@ -4,14 +4,25 @@ import ProteinViewer from './ProteinViewer'
 
 interface Props {
   query?: string | null
-  selectedPdb: string | null
+  selectedPdb?: string | null
+  generatedPdb?: string | null
+  highlight?: { chain: string; residue: number } | null
 }
 
-export default function CenterViewer({ query, selectedPdb }: Props) {
+export default function CenterViewer({ query, selectedPdb, generatedPdb, highlight }: Props) {
   // Derive label for the top bar
   const pdbId = selectedPdb
     ? selectedPdb.split('/').pop()?.replace('.pdb', '') ?? ''
     : null
+  const hasGenerated = !!generatedPdb;
+  const hasUrl = !!selectedPdb;
+  const hasStructure = hasGenerated || hasUrl;
+  console.log({
+    generatedPdb,
+
+  });
+
+
 
   return (
     <div className="flex-1 p-4 overflow-hidden">
@@ -34,9 +45,13 @@ export default function CenterViewer({ query, selectedPdb }: Props) {
         </div>
 
         {/* Viewer area */}
-        {selectedPdb ? (
+        {hasStructure ? (
           <div className="flex-1 relative overflow-hidden">
-            <ProteinViewer pdbUrl={selectedPdb} />
+            <ProteinViewer
+              pdbUrl={selectedPdb ?? undefined}
+              pdbText={generatedPdb ?? undefined}
+              highlight={highlight ?? undefined}
+            />
           </div>
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center gap-5 text-center p-8">
