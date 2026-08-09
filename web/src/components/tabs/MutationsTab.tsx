@@ -3,6 +3,9 @@ import { Search, Dna, AlertCircle, ExternalLink, FlaskConical } from 'lucide-rea
 import { useProtein } from '../../hooks/useProtein'
 import { Mutation } from '../../types'
 import MutationWorkspace from '../MutationWorkspace'
+import { MutationInfoService } from '../../services/MutationService'
+
+const mutationInfoService = new MutationInfoService()
 
 function sigStyle(sig: string | null | undefined): { label: string; color: string } {
   if (!sig) return { label: 'Unknown', color: 'text-slate-500 bg-slate-500/10 border-slate-500/20' }
@@ -115,12 +118,16 @@ export default function MutationsTab({ query }: { query: string | null }) {
 
   const all: Mutation[] = data?.mutations ?? []
 
+  console.log("MutationsTab data", data);
+
   const items = filter
     ? all.filter((m) =>
         m.title.toLowerCase().includes(filter.toLowerCase()) ||
         m.accession.toLowerCase().includes(filter.toLowerCase()) ||
         (m.source ?? '').toLowerCase().includes(filter.toLowerCase()) ||
-        (m.clinical_significance ?? '').toLowerCase().includes(filter.toLowerCase())
+        (m.clinical_significance ?? '').toLowerCase().includes(filter.toLowerCase()) ||
+        (m.chain ?? '').toLowerCase().includes(filter.toLowerCase()) ||
+        (m.residue_number ?? '').toString().toLowerCase().includes(filter.toLowerCase())
       )
     : all
 

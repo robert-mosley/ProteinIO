@@ -1,36 +1,6 @@
-"""
-Structure-preserving point mutation pipeline.
-
-Given an experimental PDB structure and a single point mutation, this:
-  1. Loads the structure
-  2. Applies the mutation via PDBFixer (swaps the residue's side chain,
-     keeping the rest of the backbone/fold intact -- much faster and more
-     grounded than a full from-scratch re-fold)
-  3. Adds any missing atoms/hydrogens and runs a short local energy
-     minimization with OpenMM so the new side chain and its neighbors
-     relax into a physically sensible position
-  4. Returns the mutant structure as a PDB string, plus a plain-English
-     description of what changed (residue properties, size/charge/
-     hydrophobicity shifts)
-
-Requirements:
-    pip install pdbfixer openmm
-
-Usage:
-    result = apply_point_mutation(
-        pdb_path="1abc.pdb",
-        chain_id="A",
-        position=1101,
-        old_residue="K",
-        new_residue="R",
-    )
-    print(result["description"])
-    with open("mutant.pdb", "w") as f:
-        f.write(result["pdb_string"])
-"""
-
+from llm import current_pdb
 from io import StringIO
-
+from get_mutation_info import *
 from openmm import unit
 from openmm.app import PDBFile, Simulation, ForceField, Modeller
 from openmm.app import NoCutoff, HBonds
@@ -96,14 +66,13 @@ def describe_mutation(old_residue, new_residue, position):
     return summary
 
 
-def apply_point_mutation(pdb_path, chain_id, position, old_residue, new_residue,
+def apply_point_mutation(pdb_string, chain_id, position, old_residue, new_residue,
                           minimize_steps=200):
     """
     Apply a single point mutation to a PDB structure and locally relax it.
 
     Args:
-        pdb_path: path to the original PDB file (e.g. one already downloaded
-            from RCSB via your StructuresTab download_url)
+        pdb_string: the original PDB structure as a string
         chain_id: which chain the mutation is on (e.g. "A")
         position: residue number (as it appears in the PDB numbering)
         old_residue: original amino acid, one-letter code (e.g. "K")
@@ -115,7 +84,7 @@ def apply_point_mutation(pdb_path, chain_id, position, old_residue, new_residue,
             pdb_string: the mutant structure as a PDB-format string
             description: plain-English description of the change
     """
-    fixer = PDBFixer(filename=pdb_path)
+    fixer = PDBFixer(fileobj=StringIO(pdb_string))
 
     old_three = AA_1TO3[old_residue]
     new_three = AA_1TO3[new_residue]
@@ -155,17 +124,3 @@ def apply_point_mutation(pdb_path, chain_id, position, old_residue, new_residue,
         "pdb_string": pdb_string,
         "description": description,
     }
-
-"""
-if __name__ == "__main__":
-    # Example usage matching your ClinVar mutation format (p.Lys1101Arg)
-    result = apply_point_mutation(
-        pdb_path="example.pdb",
-        chain_id="A",
-        position=1101,
-        old_residue="K",
-        new_residue="R",
-    )
-    print(result["description"])
-    with open("mutant.pdb", "w") as f:
-        f.write(result["pdb_string"])"""

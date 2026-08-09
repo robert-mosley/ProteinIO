@@ -1,4 +1,4 @@
-import { ProteinResponse } from '../types'
+import { ChatResponse, ProteinResponse } from '../types'
 
 const API_BASE = '/api'
 
@@ -32,7 +32,7 @@ export async function fetchProtein(query: string): Promise<ProteinResponse> {
   }
 }
 
-export async function postChat(message: string, sessionId: string): Promise<import('../types').ChatResponse> {
+export async function postChat(message: string, sessionId: string): Promise<ChatResponse> {
   try {
     const res = await fetch(`${API_BASE}/chat`, {
       method: 'POST',
@@ -62,6 +62,25 @@ export async function setCurrentPdb(pdb: string, sessionId: string): Promise<voi
     if (!res.ok) {
       throw new APIError(res.status, 'Failed to update current PDB')
     }
+  } catch (error) {
+    if (error instanceof APIError) throw error
+    throw new APIError(0, `Network error: ${error instanceof Error ? error.message : 'Unknown error'}`)
+  }
+}
+
+export async function getMutationInfo(accession: string, sessionId: string): Promise<any> {
+  try {
+    const res = await fetch(`${API_BASE}/mutation_query`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ accession, session_id: sessionId })
+    })
+
+    if (!res.ok) {
+      throw new APIError(res.status, 'Failed to fetch mutation info')
+    }
+
+    return res.json()
   } catch (error) {
     if (error instanceof APIError) throw error
     throw new APIError(0, `Network error: ${error instanceof Error ? error.message : 'Unknown error'}`)

@@ -2,6 +2,7 @@ import React from 'react'
 import { Send, Bot, AlertCircle, User } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import { chatService } from '../../services/ChatService'
+import { Pocket } from '../../types'
 
 interface Message {
   id: string
@@ -24,10 +25,36 @@ interface ChatResponse {
 
 export default function AIAssistantTab({ setSelectedPdb, setGeneratedPdb, setHighlight }: Props) {
   const [messages, setMessages] = React.useState<Message[]>([])
+  const [pocketList, setPocketList] = React.useState<Pocket[] | null>(null)
   const [input, setInput] = React.useState('')
   const [isLoading, setIsLoading] = React.useState(false)
   const [error, setError] = React.useState<string | null>(null)
   const messagesEndRef = React.useRef<HTMLDivElement>(null)
+
+  const downloadPockets = () => {
+    if (!pocketList?.length) return
+    const data = JSON.stringify(pocketList, null, 2)
+    const blob = new Blob([data], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'pockets.json'
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
+
+  const highlightPocketFirstResidue = (pocket: Pocket) => {
+    const residueIds = pocket.residue_ids?.trim() ?? ''
+    const first = residueIds.split(/\s+/)[0]
+    if (!first || !first.includes('_')) return
+    const [chain, res] = first.split('_', 2)
+    const residueNumber = Number(res)
+    if (chain && Number.isFinite(residueNumber)) {
+      setHighlight({ chain, residue: residueNumber })
+    }
+  }
 
   React.useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -38,6 +65,7 @@ export default function AIAssistantTab({ setSelectedPdb, setGeneratedPdb, setHig
     if (!message || isLoading) return
 
     setError(null)
+    setPocketList(null)
     const userMsg: Message = {
       id: chatService.generateMessageId(),
       role: 'user',
@@ -54,10 +82,11 @@ export default function AIAssistantTab({ setSelectedPdb, setGeneratedPdb, setHig
       if (response?.generated_pdb) {
         setGeneratedPdb(response.generated_pdb)
       }
+      setPocketList(response?.pockets_list ?? null)
       if (response?.pockets) {
         console.log('Highlighting pockets (raw):', response.pockets)
         const chain = response.pockets.chain
-        const rawResidue = response.pockets.residue
+        const rawResidue = response.pockets.residue as string | number | undefined
 
         let residueNumber: number | null = null
         if (typeof rawResidue === 'number') {
@@ -151,6 +180,46 @@ export default function AIAssistantTab({ setSelectedPdb, setGeneratedPdb, setHig
                 )}
               </div>
             ))}
+            {pocketList && pocketList.length > 0 && (
+              <div className="rounded-2xl border border-slate-700 bg-[#0d1829] p-3 text-xs text-slate-300">
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <div className="text-sm font-semibold text-slate-100">Predicted Pockets</div>
+                    <div className="text-slate-500 text-[11px]">{pocketList.length} pocket(s) returned by P2Rank</div>
+                  </div>
+                  <button
+                    onClick={downloadPockets}
+                    className="px-2.5 py-1 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-cyan-200 hover:bg-cyan-500/20 hover:text-white"
+                  >
+                    Download JSON
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  {pocketList.slice(0, 5).map((pocket, index) => {
+                    const residueCount = pocket.residue_ids?.trim().split(/\s+/).length ?? 0
+                    return (
+                      <div key={`${pocket.name ?? 'pocket'}-${index}`} className="rounded-xl border border-slate-700 bg-[#0b1423] p-3">
+                        <div className="flex items-center justify-between gap-3">
+                          <div>
+                            <div className="font-medium text-slate-100">{pocket.name ?? `Pocket ${pocket.rank ?? index + 1}`}</div>
+                            <div className="text-slate-500 text-[11px]">score: {pocket.score ?? 'n/a'} · probability: {pocket.probability ?? 'n/a'} · residues: {residueCount}</div>
+                          </div>
+                          <button
+                            onClick={() => highlightPocketFirstResidue(pocket)}
+                            className="rounded-lg border border-slate-600 px-2 py-1 text-[11px] text-slate-200 hover:bg-slate-800"
+                          >
+                            Highlight first residue
+                          </button>
+                        </div>
+                        {pocket.residue_ids && (
+                          <div className="mt-2 text-[11px] text-slate-400 break-words">{pocket.residue_ids}</div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
             {isLoading && (
               <div className="flex gap-2">
                 <div className="w-6 h-6 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center flex-shrink-0">

@@ -1,6 +1,21 @@
 import React from 'react'
-import { X, Dna, FlaskConical, BrainCircuit, ExternalLink } from 'lucide-react'
+import { X, Dna, FlaskConical, BrainCircuit, ExternalLink, Crosshair, AlertCircle } from 'lucide-react'
+import ReactMarkdown from 'react-markdown'
 import { Mutation } from '../types'
+import { chatService } from '../services/ChatService'
+import { MutationInfoService } from '../services/MutationService'
+import { sessionId } from '../services/SessionService'
+
+const mutationInfoService = new MutationInfoService()
+
+type Highlight = { chain: string; residue: number }
+interface Props {
+  mutation: Mutation | null
+  onClose: () => void
+  /** Wired to ProteinViewer's highlight prop so this workspace can point the 3D view at the mutation's residue. */
+  setGeneratedPdb?: (pdb: string) => void
+  setHighlight?: (highlight: Highlight | null) => void
+}
 
 function sigStyle(sig: string | null | undefined): { label: string; color: string } {
   if (!sig) return { label: 'Unknown', color: 'text-slate-500 bg-slate-500/10 border-slate-500/20' }
@@ -25,6 +40,9 @@ function clinvarUrl(accession: string): string {
 interface Props {
   mutation: Mutation | null
   onClose: () => void
+  /** Wired to ProteinViewer's highlight prop so this workspace can point the 3D view at the mutation's residue. */
+  setHighlight?: (highlight: Highlight | null) => void
+  setGeneratedPdb?: (pdb: string) => void
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
@@ -36,16 +54,88 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   )
 }
 
-export default function MutationWorkspace({ mutation, onClose }: Props) {
+export default function MutationWorkspace({ mutation, onClose, setHighlight, setGeneratedPdb }: Props) {
   const visible = mutation !== null
+
+  const [summary, setSummary] = React.useState<string | null>(null)
+  const [summaryLoading, setSummaryLoading] = React.useState(false)
+  const [summaryError, setSummaryError] = React.useState<string | null>(null)
+
+  console.log("mutation ", mutation);
+
+  const hasPosition =
+    !!mutation?.chain && typeof mutation?.residue_number === 'number' && Number.isFinite(mutation.residue_number)
+
+  const handleClose = React.useCallback(() => {
+    setHighlight?.(null)
+    onClose()
+  }, [onClose, setHighlight])
 
   // Close on Escape
   React.useEffect(() => {
     if (!visible) return
-    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') handleClose()
+    }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [visible, onClose])
+  }, [visible, handleClose])
+
+  // Automatically point the 3D viewer at this mutation's residue whenever it opens/changes.
+  React.useEffect(() => {
+    if (mutation && hasPosition) {
+      setHighlight?.({ chain: mutation.chain as string, residue: mutation.residue_number as number })
+    }
+    // Intentionally not clearing highlight here on mutation===null — handleClose already does that.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mutation?.accession, mutation?.chain, mutation?.residue_number])
+
+  // Fetch a live AI summary whenever the mutation changes.
+  React.useEffect(() => {
+    if (!mutation) {
+      setSummary(null)
+      setSummaryError(null)
+      return
+    }
+
+    let cancelled = false
+    setSummary(null)
+    setSummaryError(null)
+    setSummaryLoading(true)
+
+    const prompt = [
+      'Give a concise (3-5 sentence) plain-language summary of this mutation for a researcher.',
+      'Cover what is known about its functional/structural impact and clinical relevance if any.',
+      '',
+      `Accession: ${mutation.accession || 'unknown'}`,
+      `Source: ${mutation.source || 'unknown'}`,
+      `Clinical significance: ${mutation.clinical_significance || 'unknown'}`,
+      `Description: ${mutation.title || 'unknown'}`,
+      hasPosition ? `Location: chain ${mutation.chain}, residue ${mutation.residue_number}` : '',
+    ]
+      .filter(Boolean)
+      .join('\n')
+
+    chatService
+      .sendMessage(prompt)
+      .then((response) => {
+        if (cancelled) return
+        setSummary(response?.response ?? null)
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return
+        const errText = err instanceof Error ? err.message : 'Failed to generate summary'
+        setSummaryError(errText)
+      })
+      .finally(() => {
+        if (!cancelled) setSummaryLoading(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mutation?.accession])
 
   return (
     <>
@@ -53,7 +143,7 @@ export default function MutationWorkspace({ mutation, onClose }: Props) {
       <div
         className="fixed inset-0 z-40 bg-black/40 backdrop-blur-[2px] transition-opacity duration-200"
         style={{ opacity: visible ? 1 : 0, pointerEvents: visible ? 'auto' : 'none' }}
-        onClick={onClose}
+        onClick={handleClose}
       />
 
       {/* Drawer */}
@@ -73,7 +163,7 @@ export default function MutationWorkspace({ mutation, onClose }: Props) {
             </div>
           </div>
           <button
-            onClick={onClose}
+            onClick={handleClose}
             className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-500 hover:text-white hover:bg-[#1a3355] transition-colors"
           >
             <X className="w-4 h-4" />
@@ -129,13 +219,30 @@ export default function MutationWorkspace({ mutation, onClose }: Props) {
 
             {/* Structure section */}
             <div className="rounded-xl border border-[#1a3355] bg-[#0d1829] p-4">
-              <div className="text-[10px] font-semibold uppercase tracking-widest text-slate-500 mb-3">
-                3D Structure
+              <div className="flex items-center justify-between mb-3">
+                <div className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">
+                  3D Structure
+                </div>
+                {hasPosition && (
+                  <button
+                    onClick={() => setHighlight?.({ chain: mutation.chain as string, residue: mutation.residue_number as number })}
+                    className="flex items-center gap-1 text-[10px] text-cyan-500 hover:text-cyan-300 transition-colors"
+                  >
+                    <Crosshair className="w-3 h-3" />
+                    Re-focus
+                  </button>
+                )}
               </div>
-              <div className="flex items-center gap-2 text-xs text-slate-500">
-                <div className="w-1.5 h-1.5 rounded-full bg-slate-600" />
-                Residue highlighting coming soon.
-              </div>
+              <button
+                  onClick={() => mutationInfoService.MutationInfo(mutation.accession).then((info) => {
+                    if (info?.pdb_string) {
+                      setGeneratedPdb(info.pdb_string)
+                    }
+                  })}
+                  className="w-full px-3 py-2 rounded-lg bg-[#0d1b30] border border-[#1a3355] text-sm text-slate-300 hover:bg-[#0f2040] hover:border-[#1a3355]/50 transition-colors"
+                >
+                  Chain {mutation.chain}, Residue {mutation.residue_number}
+              </button>
             </div>
 
             {/* AI Analysis */}
@@ -143,12 +250,38 @@ export default function MutationWorkspace({ mutation, onClose }: Props) {
               <div className="flex items-center gap-2 mb-3">
                 <BrainCircuit className="w-4 h-4 text-cyan-500/50" />
                 <div className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">
-                  AI Analysis
+                  AI Summary
                 </div>
               </div>
-              <p className="text-xs text-slate-500 italic leading-relaxed">
-                Prediction models will be available in a future release.
-              </p>
+
+              {summaryLoading && (
+                <div className="flex gap-1">
+                  {[0, 1, 2].map((i) => (
+                    <div
+                      key={i}
+                      className="w-1.5 h-1.5 rounded-full bg-slate-600 animate-bounce"
+                      style={{ animationDelay: `${i * 0.15}s` }}
+                    />
+                  ))}
+                </div>
+              )}
+
+              {!summaryLoading && summaryError && (
+                <div className="flex gap-2 p-2.5 rounded-lg bg-red-500/10 border border-red-500/20">
+                  <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
+                  <div className="text-xs text-red-300">{summaryError}</div>
+                </div>
+              )}
+
+              {!summaryLoading && !summaryError && summary && (
+                <div className="prose prose-invert prose-xs max-w-none text-xs text-slate-300 leading-relaxed">
+                  <ReactMarkdown>{summary}</ReactMarkdown>
+                </div>
+              )}
+
+              {!summaryLoading && !summaryError && !summary && (
+                <p className="text-xs text-slate-500 italic leading-relaxed">No summary available.</p>
+              )}
             </div>
 
           </div>

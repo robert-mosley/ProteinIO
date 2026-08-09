@@ -26,6 +26,8 @@ export interface Mutation {
   accession: string
   title: string
   clinical_significance: string | null
+  chain: string
+  residue_number: number
 }
 
 /**
@@ -40,10 +42,22 @@ export interface ProteinResponse {
 /**
  * Chat response from /chat endpoint
  */
+export interface Pocket {
+  name?: string
+  rank?: number
+  score?: number
+  probability?: number
+  residue_ids?: string
+  surf_atoms?: number
+  surf_atom_ids?: string
+  [key: string]: any
+}
+
 export interface ChatResponse {
   response: string
   generated_pdb?: string | null
   pockets?: { chain: string; residue: number } | null
+  pockets_list?: Pocket[] | null
 }
 
 /**

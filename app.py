@@ -5,6 +5,8 @@ from proteins import *
 from generator import *
 from analyze import *
 from fastapi.middleware.cors import CORSMiddleware
+from get_mutation_info import get_pdb_mutation_details
+from mutation import *
 from llm import *
 import llm as llm_module
 from fastapi.responses import FileResponse
@@ -47,10 +49,8 @@ class MissenseQuery(BaseModel):
     uniprot: str
     mutation: str
 
-class UnknownMutation(BaseModel):
-    sequence: str
-    index: int
-    mut: str
+class MutationQuery(BaseModel):
+    accession: str
 
 class CurrentPdbQuery(BaseModel):
     pdb: str
@@ -109,7 +109,6 @@ async def chat(question: ChatQuery):
             if tool_call["name"] == "queryProtein":
                 called_my_tool = True
     result = response["messages"][-1].content
-    print(result)
 
     if isinstance(result, list):
         response_text = "".join(
@@ -122,23 +121,37 @@ async def chat(question: ChatQuery):
 
     # Extract pocket data from agent response
     pockets_data = None
+    pockets_list = None
     if response.get("pockets"):
-        pockets_list = response["pockets"]
-        print(f"Extracted pockets from response: {pockets_list}")
-        if isinstance(pockets_list, list) and len(pockets_list) > 0:
-            first_pocket = pockets_list[0]
-            if isinstance(first_pocket, dict):
-                residue_ids = first_pocket.get("residue_ids", "")
+        raw_pockets = response["pockets"]
+        print(f"Extracted pockets from response: {raw_pockets}")
+        if isinstance(raw_pockets, list):
+            pockets_list = raw_pockets
+            if len(raw_pockets) > 0:
+                first_pocket = raw_pockets[0]
+                if isinstance(first_pocket, dict):
+                    residue_ids = first_pocket.get("residue_ids", "")
 
-                # residue_ids format: "A_103 A_180 B_42"
-                if residue_ids:
-                    first_residue = residue_ids.split()[0]  # Get first one: "A_103"
-                    if "_" in first_residue:
-                        chain, res_num = first_residue.split("_", 1)
-                        try:
-                            pockets_data = {"chain": chain, "residue": int(res_num)}
-                        except ValueError:
-                            print(f"Could not parse residue number from: {res_num}")
+                    # residue_ids format: "A_103 A_180 B_42"
+                    if residue_ids:
+                        first_residue = residue_ids.split()[0]  # Get first one: "A_103"
+                        if "_" in first_residue:
+                            chain, res_num = first_residue.split("_", 1)
+                            try:
+                                pockets_data = {"chain": chain, "residue": int(res_num)}
+                            except ValueError:
+                                print(f"Could not parse residue number from: {res_num}")
+        elif isinstance(raw_pockets, dict):
+            pockets_list = [raw_pockets]
+            residue_ids = raw_pockets.get("residue_ids", "")
+            if residue_ids:
+                first_residue = residue_ids.split()[0]
+                if "_" in first_residue:
+                    chain, res_num = first_residue.split("_", 1)
+                    try:
+                        pockets_data = {"chain": chain, "residue": int(res_num)}
+                    except ValueError:
+                        print(f"Could not parse residue number from: {res_num}")
 
     active_pdb = response.get("current_pdb") or response.get("pdb") or current_pdb
     if active_pdb:
@@ -154,17 +167,13 @@ async def chat(question: ChatQuery):
     return {
         "response": response_text,
         "pockets": pockets_data,
+        "pockets_list": pockets_list,
         "generated_pdb": generated_pdb,
     }
 @app.post("/search_missense")
 def search_missense(query: MissenseQuery):
     alpha = AlphaMissenseService()
     return alpha.search(query.uniprot, query.mutation)
-
-@app.post("/search_unknown_mutation")
-def search_unknown(variant: UnknownMutation):
-    esms = ESMService()
-    return esms.mutation(variant.sequence, variant.index, variant.mut)
 
 @app.post("/proteinDesign")
 def design_protein(sequence):
@@ -189,3 +198,16 @@ async def queryProtein(query):
         "family": family,
         "pdb": current_pdb
     }
+
+@app.post("/mutation_query")
+async def mutation_query(accession: MutationQuery, session_id: Optional[str] = None):
+    details = get_pdb_mutation_details(accession.accession, session_current_pdbs.get(session_id, llm_module.pdb_string))
+    result = apply_point_mutation(
+        pdb_string=details["pdb_string"],
+        chain_id=details["chain_id"],
+        position=details["pdb_res_num"],
+        old_residue=details["old_residue"],
+        new_residue=details["new_residue"],
+    )
+    print(result)
+    return {"description": result["description"], "pdb_string": result["pdb_string"]}

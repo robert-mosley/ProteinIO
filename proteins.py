@@ -106,6 +106,7 @@ class ClinVarService:
 
         for uid in data["result"]["uids"]:
             item = data["result"][uid]
+            print(item)
 
             classification = item.get("germline_classification", {})
 
@@ -227,4 +228,3 @@ class ProteinService:
             structures=structures,
             mutations=mutations
         )
-
