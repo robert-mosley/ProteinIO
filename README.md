@@ -4,7 +4,7 @@
 
 ## 🚀 Try ProteinIO
 
-**[Launch ProteinIO →](https://www.proteinio.org/)**
+**[🧬 **Launch ProteinIO**](https://www.proteinio.org/)**
 
 # Demo
 
