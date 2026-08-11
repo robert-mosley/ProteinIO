@@ -61,6 +61,8 @@ export default function MutationWorkspace({ mutation, onClose, setHighlight, set
   const [summaryLoading, setSummaryLoading] = React.useState(false)
   const [summaryError, setSummaryError] = React.useState<string | null>(null)
 
+  const sequence = mutation?.sequence || 'Unknown sequence'
+
   console.log("mutation ", mutation);
 
   const hasPosition =
@@ -221,7 +223,7 @@ export default function MutationWorkspace({ mutation, onClose, setHighlight, set
             <div className="rounded-xl border border-[#1a3355] bg-[#0d1829] p-4">
               <div className="flex items-center justify-between mb-3">
                 <div className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">
-                  3D Structure
+                  Mutation WS
                 </div>
                 {hasPosition && (
                   <button
@@ -234,14 +236,15 @@ export default function MutationWorkspace({ mutation, onClose, setHighlight, set
                 )}
               </div>
               <button
-                  onClick={() => mutationInfoService.MutationInfo(mutation.accession).then((info) => {
+                  onClick={() => mutationInfoService.MutationInfo(mutation.sequence, mutation.position, mutation.new_residue).then((info) => {
+                    console.log("Mutation info fetched:", info)
                     if (info?.pdb_string) {
                       setGeneratedPdb(info.pdb_string)
                     }
                   })}
                   className="w-full px-3 py-2 rounded-lg bg-[#0d1b30] border border-[#1a3355] text-sm text-slate-300 hover:bg-[#0f2040] hover:border-[#1a3355]/50 transition-colors"
                 >
-                  Chain {mutation.chain}, Residue {mutation.residue_number}
+                  Mutate Protein
               </button>
             </div>
 

@@ -68,12 +68,13 @@ export async function setCurrentPdb(pdb: string, sessionId: string): Promise<voi
   }
 }
 
-export async function getMutationInfo(accession: string, sessionId: string): Promise<any> {
+export async function getMutationInfo(sequence: string, position: number, new_residue: string): Promise<any> {
   try {
-    const res = await fetch(`${API_BASE}/mutation_query`, {
+    console.log("getMutationInfo called with", sequence, position, new_residue);
+    const res = await fetch(`${API_BASE}/mutation`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ accession, session_id: sessionId })
+      body: JSON.stringify({ sequence, position, new_residue })
     })
 
     if (!res.ok) {

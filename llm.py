@@ -49,7 +49,9 @@ class MessageState(TypedDict):
 
 @tool
 async def predict_pockets(state: MessageState):
-    """Predict pockets in a protein structure using P2Rank. The protein should be already loaded in viewer assume it is."""
+    """Predict ligand-binding pockets for the protein structure currently loaded 
+    in the session. Call this whenever the user asks to find binding pockets 
+    in a protein."""
     pdb_source = state.get("current_pdb") or state.get("pdb") or pdb_string
     pdb_text = await resolve_pdb_text(pdb_source)
     if not pdb_text:
@@ -79,10 +81,7 @@ async def predict_pockets(state: MessageState):
         )
         atom_count = pdb_text.count("ATOM")
 
-        if atom_count < 100:
-            raise ValueError(
-                "PDB appears incomplete. Please provide a full protein structure."
-            )
+
 
         if not os.path.exists(prediction_file):
             raise ValueError("P2Rank did not produce a prediction file.")
@@ -149,7 +148,7 @@ async def queryProtein(query, session_id):
     Generate a novel protein from a natural language specification.
 
     The input should be a detailed protein design prompt rather than the user's
-    original request.
+    original request. It should onlt include the protein which is usually just 4 capital letters.
 
     The prompt should include:
     - The desired biological function.
@@ -180,7 +179,7 @@ async def queryProtein(query, session_id):
 
 @tool
 async def protein_getter(query):
-    "Retrieve information about a certain protein such a structures information and mutations."
+    "Retrieve information about a certain protein such a structures information and mutations. Don't use to find binding pockets"
     protein = await ProteinService().search(query)
     protein_info = protein.uniprot["primaryAccession"]
     structures = []
@@ -201,7 +200,7 @@ async def protein_getter(query):
         }
     }
 
-tools = [protein_getter, predict_pockets, searchProteinFromDisease]
+tools = [predict_pockets, protein_getter, queryProtein, searchProteinFromDisease]
 model_tools = model.bind_tools(tools)
 
 tools_by_name = {tool.name: tool for tool in tools}
@@ -221,13 +220,11 @@ and experimental results.
 
 Do not fabricate scientific claims.
 
-Clearly distinguish predictions from verified biological knowledge.
-
-Use the available tools when appropriate.
+Use the available tools when appropriate. 
 
 If uncertain,
 say you are uncertain."""),
-        ] + state["messages"]
+        ] + state["messaWges"]
     )
     return {
         "messages": [response],

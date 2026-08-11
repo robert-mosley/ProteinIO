@@ -27,7 +27,9 @@ export interface Mutation {
   title: string
   clinical_significance: string | null
   chain: string
-  residue_number: number
+  position: number
+  new_residue: string
+  sequence: string
 }
 
 /**

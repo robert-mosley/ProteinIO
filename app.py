@@ -1,5 +1,5 @@
 import dataclasses
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel
 from proteins import *
 from generator import *
@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from get_mutation_info import get_pdb_mutation_details
 from mutation import *
 from llm import *
+from Fold import *
 import llm as llm_module
 from fastapi.responses import FileResponse
 from pathlib import Path
@@ -44,6 +45,11 @@ class ChatQuery(BaseModel):
 
 class ProteinQuery(BaseModel):
     query: str
+
+class MutationRequest(BaseModel):
+    sequence: str
+    position: int
+    new_residue: str
 
 class MissenseQuery(BaseModel):
     uniprot: str
@@ -211,3 +217,57 @@ async def mutation_query(accession: MutationQuery, session_id: Optional[str] = N
     )
     print(result)
     return {"description": result["description"], "pdb_string": result["pdb_string"]}
+
+@app.post("/mutation")
+async def mutation(request: MutationRequest):
+
+    sequence = request.sequence.upper()
+    new_residue = request.new_residue.upper()
+
+    if not 1 <= request.position <= len(sequence):
+        raise HTTPException(
+            status_code=400,
+            detail="Residue position is outside the sequence."
+        )
+
+    if len(new_residue) != 1 or new_residue not in "ACDEFGHIKLMNPQRSTVWY":
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid amino acid."
+        )
+
+    index = request.position - 1
+
+    original_residue = sequence[index]
+
+    mutated_sequence = (
+        sequence[:index]
+        + new_residue
+        + sequence[index + 1:]
+    )
+
+    if original_residue == new_residue:
+        raise HTTPException(
+            status_code=400,
+            detail="New residue is the same as the original residue."
+        )
+
+    mutant_pdb = mutate_pdb(
+        pdb_string=pdb_string,
+        chain="A",
+        position=248,
+        mutant="Q",
+    )
+
+    return {
+        "position": request.position,
+        "original_residue": original_residue,
+        "new_residue": new_residue,
+        "mutation": (
+            f"{original_residue}"
+            f"{request.position}"
+            f"{new_residue}"
+        ),
+        "sequence": mutated_sequence,
+        "pdb": mutant_pdb
+    }

@@ -99,3 +99,4 @@ export default function ProteinTab({ query }: { query: string | null }) {
     </div>
   )
 }
+
