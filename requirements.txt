@@ -2,20 +2,40 @@
 #
 # Install with:
 #   python -m pip install -r requirements.txt
+#
+# Some capabilities also require system-level scientific tooling:
+# - P2Rank is used as an external executable for pocket prediction.
+# - ESM3 model weights are downloaded by the ESM package when first used.
 
 # API runtime
 fastapi>=0.115,<1
 uvicorn[standard]>=0.30,<1
 pydantic>=2,<3
 
-# External scientific data services
+# Async and synchronous HTTP clients for public scientific APIs
+httpx>=0.27,<1
 requests>=2.31,<3
 
 # Environment configuration
 python-dotenv>=1,<2
 
-# AI assistant foundation used by llm.py
+# AI assistant and tool orchestration
 langchain>=0.3,<1
 langchain-core>=0.3,<2
-langchain-anthropic>=0.3,<1
+langchain-google-genai>=2,<3
 langgraph>=0.2,<1
+
+# Protein generation / structure prediction client
+gradio-client>=1,<2
+
+# Scientific data analysis and variant interpretation
+pandas>=2,<3
+biopython>=1.84,<2
+
+# Protein language model and tensor runtime
+torch>=2,<3
+esm>=3,<4
+
+# Molecular mutation and energy-minimization workflow
+openmm>=8,<9
+pdbfixer>=1.9,<2
