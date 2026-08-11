@@ -1,6 +1,6 @@
 import { ChatResponse, ProteinResponse } from '../types'
 
-const API_BASE = 'https://proteinio.onrender.com/'
+const API_BASE = 'https://proteinio.onrender.com'
 
 class APIError extends Error {
   constructor(public status: number, message: string) {
