@@ -225,7 +225,7 @@ Use the available tools when appropriate.
 
 If uncertain,
 say you are uncertain."""),
-        ] + state["messaWges"]
+        ] + state["messages"]
     )
     return {
         "messages": [response],
