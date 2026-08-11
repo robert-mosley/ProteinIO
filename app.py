@@ -8,7 +8,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from get_mutation_info import get_pdb_mutation_details
 from mutation import *
 from llm import *
-from Fold import *
 import llm as llm_module
 from fastapi.responses import FileResponse
 from pathlib import Path
