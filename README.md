@@ -2,6 +2,14 @@
 
 ## An AI-powered research workspace for proteins, structures, mutations, and druggable pockets
 
+## 🚀 Try ProteinIO
+
+**[🧬 **Launch ProteinIO**](https://www.proteinio.org/)**
+
+# Demo
+
+https://github.com/user-attachments/assets/64234651-82d1-4dc7-acdf-2a1f3a99e99d
+
 ProteinIO is a full-stack computational biology platform that turns a protein or gene query into an interactive research workspace. It combines live protein records, experimental structures, clinical variants, AI-assisted research, pocket prediction, and structure mutation workflows in one focused interface.
 
 This project is built to demonstrate more than a polished frontend. It connects scientific data services, machine-learning workflows, molecular structure tooling, and an AI agent behind a typed web application.
