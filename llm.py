@@ -24,7 +24,8 @@ load_dotenv()
 app = FastAPI()
 model = ChatGoogleGenerativeAI(
     model="gemini-3.5-flash-lite",
-    temperature=0
+    temperature=0,
+    google_api_key=os.environ["GEMINI_API_KEY"]
 )
 
 async def resolve_pdb_text(pdb_value):
