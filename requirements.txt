@@ -1,0 +1,21 @@
+# ProteinIO backend — Python 3.12+
+#
+# Install with:
+#   python -m pip install -r requirements.txt
+
+# API runtime
+fastapi>=0.115,<1
+uvicorn[standard]>=0.30,<1
+pydantic>=2,<3
+
+# External scientific data services
+requests>=2.31,<3
+
+# Environment configuration
+python-dotenv>=1,<2
+
+# AI assistant foundation used by llm.py
+langchain>=0.3,<1
+langchain-core>=0.3,<2
+langchain-anthropic>=0.3,<1
+langgraph>=0.2,<1
