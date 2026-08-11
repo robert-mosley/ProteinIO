@@ -2,6 +2,10 @@
 
 ## An AI-powered research workspace for proteins, structures, mutations, and druggable pockets
 
+## 🚀 Try ProteinIO
+
+**[Launch ProteinIO →](https://www.proteinio.org/)**
+
 # Demo
 
 https://github.com/user-attachments/assets/64234651-82d1-4dc7-acdf-2a1f3a99e99d
