@@ -14,16 +14,10 @@ from pathlib import Path
 from typing import Optional
 
 app = FastAPI()
-origins = [
-    "http://localhost:8000",
-    "http://localhost:5000",
-    "http://10.0.0.19:8000",
-    "http://10.0.0.19:5000"
-]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=["*"],
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
