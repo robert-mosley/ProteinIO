@@ -4,7 +4,7 @@ import pandas as pd
 import httpx
 from langgraph.graph import StateGraph, START, END
 from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain.messages import AnyMessage, SystemMessage, AIMessage, HumanMessage, ToolMessage
+from langchain_core.messages import AnyMessage, SystemMessage, AIMessage, HumanMessage, ToolMessage
 from langchain.tools import tool
 import operator
 from typing import TypedDict, Annotated

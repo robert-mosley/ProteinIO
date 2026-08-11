@@ -1,6 +1,8 @@
 import { ChatResponse, ProteinResponse } from '../types'
 
-const API_BASE = '/api'
+// Vite proxies /api to FastAPI during development. In production the built
+// React app is served by FastAPI itself, so API requests use the same origin.
+const API_BASE = import.meta.env.DEV ? '/api' : ''
 
 class APIError extends Error {
   constructor(public status: number, message: string) {

@@ -1,5 +1,6 @@
 import dataclasses
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from proteins import *
 from generator import *
@@ -18,7 +19,7 @@ origins = [
     "http://localhost:8000",
     "http://localhost:5000",
     "http://10.0.0.19:8000",
-    "http://10.0.0.19:5000"
+    "http://10.0.0.19:5000",
 ]
 
 app.add_middleware(
@@ -29,6 +30,26 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+WEB_DIST = Path(__file__).resolve().parent / "web" / "dist"
+WEB_ASSETS = WEB_DIST / "assets"
+
+if WEB_ASSETS.exists():
+    app.mount("/assets", StaticFiles(directory=WEB_ASSETS), name="assets")
+
+
+@app.get("/")
+async def frontend():
+    """Serve the built React application in published deployments."""
+    index_file = WEB_DIST / "index.html"
+    if index_file.exists():
+        return FileResponse(index_file)
+    return {
+        "service": "ProteinIO API",
+        "status": "ok",
+        "message": "Build the frontend with `cd web && npm run build` to serve the web app.",
+    }
+
+
 messages = {}
 session_current_pdbs = {}
 
@@ -36,25 +57,31 @@ session_current_pdbs = {}
 def get_messages(session_id):
     return messages.get(session_id, [])
 
+
 class ChatQuery(BaseModel):
     query: str
     session_id: str
     pdb: Optional[str] = None
     current_pdb: Optional[str] = None
 
+
 class ProteinQuery(BaseModel):
     query: str
+
 
 class MissenseQuery(BaseModel):
     uniprot: str
     mutation: str
 
+
 class MutationQuery(BaseModel):
     accession: str
+
 
 class CurrentPdbQuery(BaseModel):
     pdb: str
     session_id: Optional[str] = None
+
 
 @app.post("/getProtein")
 async def get_protein(protein: ProteinQuery):
@@ -63,13 +90,16 @@ async def get_protein(protein: ProteinQuery):
     return {
         "protein": {
             "accession": res.uniprot["primaryAccession"],
-            "name": res.uniprot["proteinDescription"]["recommendedName"]["fullName"]["value"],
+            "name": res.uniprot["proteinDescription"]["recommendedName"]["fullName"][
+                "value"
+            ],
             "sequence": res.uniprot["sequence"]["value"],
             "length": res.uniprot["sequence"]["length"],
         },
         "structures": res.structures,
         "mutations": [dataclasses.asdict(m) for m in res.mutations],
     }
+
 
 @app.post("/set_current_pdb")
 async def set_current_pdb(payload: CurrentPdbQuery):
@@ -82,12 +112,17 @@ async def set_current_pdb(payload: CurrentPdbQuery):
         "pdb": payload.pdb,
     }
 
+
 @app.post("/chat")
 async def chat(question: ChatQuery):
     if question.session_id not in messages:
         messages[question.session_id] = []
 
-    current_pdb = question.current_pdb or question.pdb or session_current_pdbs.get(question.session_id)
+    current_pdb = (
+        question.current_pdb
+        or question.pdb
+        or session_current_pdbs.get(question.session_id)
+    )
     if current_pdb:
         session_current_pdbs[question.session_id] = current_pdb
         llm_module.pdb_string = current_pdb
@@ -112,7 +147,9 @@ async def chat(question: ChatQuery):
 
     if isinstance(result, list):
         response_text = "".join(
-            part.get("text", "") for part in result if isinstance(part, dict) and part.get("text")
+            part.get("text", "")
+            for part in result
+            if isinstance(part, dict) and part.get("text")
         )
     elif isinstance(result, str):
         response_text = result
@@ -170,20 +207,25 @@ async def chat(question: ChatQuery):
         "pockets_list": pockets_list,
         "generated_pdb": generated_pdb,
     }
+
+
 @app.post("/search_missense")
 def search_missense(query: MissenseQuery):
     alpha = AlphaMissenseService()
     return alpha.search(query.uniprot, query.mutation)
+
 
 @app.post("/proteinDesign")
 def design_protein(sequence):
     prodes = ProteinDesign()
     return prodes.protein_generation(sequence)
 
+
 @app.post("/generateStructure")
 def structure(sequence):
     prodes = ProteinDesign()
     return prodes.generate_structure(sequence)
+
 
 @app.post("/queryProtein")
 async def queryProtein(query):
@@ -193,15 +235,14 @@ async def queryProtein(query):
     family = fp.generate_protein(query)["family"]
     current_pdb = prodes.generate_structure(seq)
     llm_module.pdb_string = current_pdb
-    return {
-        "sequence": seq,
-        "family": family,
-        "pdb": current_pdb
-    }
+    return {"sequence": seq, "family": family, "pdb": current_pdb}
+
 
 @app.post("/mutation_query")
 async def mutation_query(accession: MutationQuery, session_id: Optional[str] = None):
-    details = get_pdb_mutation_details(accession.accession, session_current_pdbs.get(session_id, llm_module.pdb_string))
+    details = get_pdb_mutation_details(
+        accession.accession, session_current_pdbs.get(session_id, llm_module.pdb_string)
+    )
     result = apply_point_mutation(
         pdb_string=details["pdb_string"],
         chain_id=details["chain_id"],
@@ -211,3 +252,8 @@ async def mutation_query(accession: MutationQuery, session_id: Optional[str] = N
     )
     print(result)
     return {"description": result["description"], "pdb_string": result["pdb_string"]}
+
+
+@app.get("/")
+def health():
+    return {"status": "ok"}

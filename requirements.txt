@@ -39,3 +39,5 @@ esm>=3,<4
 # Molecular mutation and energy-minimization workflow
 openmm>=8,<9
 pdbfixer>=1.9,<2
+httpx
+spyprot
