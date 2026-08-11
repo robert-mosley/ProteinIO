@@ -1,7 +1,6 @@
 RFdiffusion/
 web/node_modules/
 web/dist/
-p2rank/
 __pycache__/
 .env
 venv/
