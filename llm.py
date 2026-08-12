@@ -51,23 +51,23 @@ class MessageState(TypedDict):
 
 @tool
 async def predict_pockets(state: MessageState):
-    """Predict ligand-binding pockets for the protein structure currently loaded 
-    in the session. Call this whenever the user asks to find binding pockets 
-    in a protein."""
+    """Predict ligand-binding pockets for the protein structure currently loaded
+    in the session. Call this whenever the user asks to find binding pockets
+    in a protein.
+    """
+
     pdb_source = state.get("current_pdb") or state.get("pdb") or pdb_string
     pdb_text = await resolve_pdb_text(pdb_source)
 
     if not pdb_text:
         raise ValueError(
-            "No protein structure is currently available for p2rank analysis."
+            "No protein structure is currently available for P2Rank analysis."
         )
 
-    # Find P2Rank relative to this Python file
     BASE_DIR = Path(__file__).resolve().parent
     P2RANK_DIR = BASE_DIR / "p2rank"
     PRANK = P2RANK_DIR / "prank.sh"
 
-    # Debugging / Render logs
     print("BASE_DIR:", BASE_DIR)
     print("P2RANK_DIR:", P2RANK_DIR)
     print("P2RANK EXISTS:", P2RANK_DIR.exists())
@@ -84,41 +84,58 @@ async def predict_pockets(state: MessageState):
         )
 
     with tempfile.TemporaryDirectory() as tmpdir:
+
         pdb_path = os.path.join(tmpdir, "protein.pdb")
 
         with open(pdb_path, "w") as f:
             f.write(pdb_text)
 
         process = await asyncio.create_subprocess_exec(
-            "./prank.sh",
+            str(PRANK),
             "predict",
             "-f",
             pdb_path,
             "-o",
             tmpdir,
-            cwd="p2rank"
+            cwd=str(P2RANK_DIR),
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
         )
 
-        await process.wait()
+        stdout, stderr = await process.communicate()
 
-        prediction_file = os.path.join(
-            tmpdir,
-            "protein.pdb_predictions.csv"
-        )
-        atom_count = pdb_text.count("ATOM")
+        stderr_text = stderr.decode(errors="replace")
 
 
+        for root, dirs, files in os.walk(tmpdir):
+            print("DIR:", root)
+            print("FILES:", files)
 
-        if not os.path.exists(prediction_file):
-            raise ValueError("P2Rank did not produce a prediction file.")
+        if process.returncode != 0:
+            raise RuntimeError(
+                f"P2Rank failed with exit code {process.returncode}:\n"
+                f"{stderr_text}"
+            )
 
+        prediction_files = []
+
+        for root, dirs, files in os.walk(tmpdir):
+            for filename in files:
+                if filename.endswith("_predictions.csv"):
+                    prediction_files.append(
+                        os.path.join(root, filename)
+                    )
+
+        if not prediction_files:
+            raise ValueError(
+                "P2Rank completed but did not produce a prediction CSV."
+            )
+
+        prediction_file = prediction_files[0]
         pockets_df = pd.read_csv(prediction_file)
-        print("Predicted pockets (raw):", pockets_df)
-        print(pdb_text[:500])
-
-        # Normalize column names and string values so downstream parsing is robust
         raw_records = pockets_df.to_dict(orient="records")
         cleaned_records = []
+
         for rec in raw_records:
             cleaned = {}
             for k, v in rec.items():
@@ -132,13 +149,19 @@ async def predict_pockets(state: MessageState):
                     nv = v
                 cleaned[nk] = nv
 
-            # Normalize residue_ids spacing (e.g. " C_32 C_34" -> "C_32 C_34")
-            if "residue_ids" in cleaned and isinstance(cleaned["residue_ids"], str):
-                cleaned["residue_ids"] = " ".join(cleaned["residue_ids"].split())
+            if (
+                "residue_ids" in cleaned
+                and isinstance(cleaned["residue_ids"], str)
+            ):
+                cleaned["residue_ids"] = " ".join(
+                    cleaned["residue_ids"].split()
+                )
 
             cleaned_records.append(cleaned)
 
-        return {"pockets": cleaned_records}
+        return {
+            "pockets": cleaned_records
+        }
 
 @tool
 async def searchProteinFromDisease(disease_name: str):
