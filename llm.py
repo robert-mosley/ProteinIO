@@ -71,7 +71,7 @@ async def predict_pockets(state: MessageState):
             pdb_path,
             "-o",
             tmpdir,
-            cwd="/home/bobby/Projects/ProteinIO/p2rank"
+            cwd="/p2rank"
         )
 
         await process.wait()
