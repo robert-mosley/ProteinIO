@@ -16,6 +16,7 @@ from analyze import *
 from proteins import *
 import asyncio
 import json
+from pathlib import Path
 
 CURRENT_SESSION = None
 pdb_string = None
@@ -55,8 +56,32 @@ async def predict_pockets(state: MessageState):
     in a protein."""
     pdb_source = state.get("current_pdb") or state.get("pdb") or pdb_string
     pdb_text = await resolve_pdb_text(pdb_source)
+
     if not pdb_text:
-        raise ValueError("No protein structure is currently available for p2rank analysis.")
+        raise ValueError(
+            "No protein structure is currently available for p2rank analysis."
+        )
+
+    # Find P2Rank relative to this Python file
+    BASE_DIR = Path(__file__).resolve().parent
+    P2RANK_DIR = BASE_DIR / "p2rank"
+    PRANK = P2RANK_DIR / "prank.sh"
+
+    # Debugging / Render logs
+    print("BASE_DIR:", BASE_DIR)
+    print("P2RANK_DIR:", P2RANK_DIR)
+    print("P2RANK EXISTS:", P2RANK_DIR.exists())
+    print("PRANK EXISTS:", PRANK.exists())
+
+    if not P2RANK_DIR.exists():
+        raise FileNotFoundError(
+            f"P2Rank directory not found: {P2RANK_DIR}"
+        )
+
+    if not PRANK.exists():
+        raise FileNotFoundError(
+            f"prank.sh not found: {PRANK}"
+        )
 
     with tempfile.TemporaryDirectory() as tmpdir:
         pdb_path = os.path.join(tmpdir, "protein.pdb")
