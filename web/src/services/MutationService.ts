@@ -3,9 +3,10 @@ import { sessionId } from "./SessionService";
 
 
 export class MutationInfoService {
-  async MutationInfo(accession: string): Promise<any> {
+  async MutationInfo(sequence: string, position: number, new_residue: string): Promise<any> {
     try {
-      const response = await getMutationInfo(accession, sessionId)
+      console.log("MutationInfoService called with beee", sequence, position, new_residue);
+      const response = await getMutationInfo(sequence, position, new_residue)
       return response
     } catch (error) {
       throw error

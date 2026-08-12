@@ -7,7 +7,6 @@ from openmm.app import NoCutoff, HBonds
 from openmm import LangevinMiddleIntegrator
 from pdbfixer import PDBFixer
 
-
 # One-letter to three-letter amino acid code mapping (PDBFixer/OpenMM want
 # three-letter codes for its applyMutations call).
 AA_1TO3 = {

@@ -1,12 +1,30 @@
 import sqlite3
 from esm.sdk.api import ESMProtein, GenerationConfig
 from esm.models.esm3 import ESM3
+import requests
 import torch
 import io
+from esm.pretrained import load_local_model
+#clear cache
+"""
+torch.cuda.empty_cache()
+#clear memory
+torch.cuda.reset_peak_memory_stats()
 
-#pd_model = ESM3.from_pretrained("esm3_sm_open_v1")
-print("model_loaded")
+device = torch.device("cpu")
 
+pd_model = load_local_model(
+    "esm3_sm_open_v1",
+    device=device,
+)
+
+pd_model = pd_model.to(
+    device=torch.device("cuda"),
+    dtype=torch.bfloat16,
+)
+
+pd_model.eval()
+"""
 class AlphaMissenseService():
     def __init__(self):
         self.conn = sqlite3.connect("alphamissense.db")
@@ -32,17 +50,14 @@ AND protein_variant = ?
         }
 
 class ESMService():
-    def __init__(self):
-        self.model = ESM3.from_pretrained("esm3_sm_open_v1")
-
     def mutation(self, sequence, index, mut):
         protein = ESMProtein(sequence=sequence)
-        tensor = self.model.infer_protein_tensor(protein)
+        tensor = pd_model.infer_protein_tensor(protein)
         logits = tensor.logits
 
         prev = sequence[index]
-        prev_token_id = self.model.tokenizer.encoder(prev)[0]
-        mut_token_id = self.model.tokenizer.encoder(mut)[0]
+        prev_token_id = pd_model.tokenizer.encoder(prev)[0]
+        mut_token_id = pd_model.tokenizer.encoder(mut)[0]
 
         score1 = logits[index, prev_token_id].item()
         score2 = logits[index, mut_token_id].item()
@@ -57,8 +72,13 @@ class ProteinDesign():
     def protein_generation(self, sequence):
         protein = ESMProtein(sequence=sequence)
         config = GenerationConfig(temperature=0.7, top_p=0.9)
-        designed_protein = pd_model.generate(protein, config)
-        return designed_protein.sequence
+        with torch.inference_mode():
+            predicted_protein = pd_model.generate(
+                protein,
+                config
+            )
+
+        return predicted_protein.sequence
     def generate_structure(self, sequence):
         protein = ESMProtein(sequence=sequence)
 

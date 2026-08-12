@@ -1,4 +1,8 @@
 RFdiffusion/
+venv/
+web/node_modules/
+web/dist/
+__pycache__/
 .env
 venv/
 p2rank/

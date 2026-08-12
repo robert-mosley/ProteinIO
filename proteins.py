@@ -1,3 +1,4 @@
+import re
 import httpx
 import requests
 from dataclasses import dataclass
@@ -22,7 +23,12 @@ class Mutation:
     source: str
     accession: str
     title: str
+    protein_change: Optional[str] = None
+    original_residue: Optional[str] = None
+    position: Optional[int] = None
+    new_residue: Optional[str] = None
     clinical_significance: Optional[str] = None
+    sequence: Optional[str] = None
 
 @dataclass
 class Protein:
@@ -30,6 +36,46 @@ class Protein:
     uniprot: Dict
     structures: List[Structure]
     mutations: List[Mutation]
+
+
+def parse_protein_change(protein_change: str):
+    """
+    Parse mutations such as:
+
+        R248Q
+        Arg248Gln
+        p.Arg248Gln
+
+    Returns:
+        {
+            "original_residue": "R",
+            "position": 248,
+            "new_residue": "Q"
+        }
+    """
+
+    if not protein_change:
+        return None
+
+    change = protein_change.strip()
+
+    # Remove p. if present
+    change = re.sub(r"^p\.", "", change)
+
+    # One-letter notation: R248Q
+    match = re.fullmatch(
+        r"([ACDEFGHIKLMNPQRSTVWY])(\d+)([ACDEFGHIKLMNPQRSTVWY])",
+        change
+    )
+
+    if match:
+        return {
+            "original_residue": match.group(1),
+            "position": int(match.group(2)),
+            "new_residue": match.group(3),
+        }
+
+    return None    
 
 class UniProtService:
     async def search(self, query):
@@ -68,7 +114,11 @@ class UniProtService:
 
 
 class ClinVarService:
-    async def search(self, gene: str) -> list[Mutation]:
+    def __init__(self):
+        self.uniprot = UniProtService()
+    async def search(self, gene: str, query) -> list[Mutation]:
+        sequence = await self.uniprot.search(query)
+        sequence = sequence["sequence"]["value"]
         async with httpx.AsyncClient() as client:
             response = await client.get(
                 f"{NCBI_BASE}/esearch.fcgi",
@@ -110,15 +160,34 @@ class ClinVarService:
 
             classification = item.get("germline_classification", {})
 
+            protein_change = item.get("protein_change", "")
+            parsed = parse_protein_change(protein_change)
+
             mutations.append(
                 Mutation(
                     source="ClinVar",
                     accession=item.get("accession", ""),
                     title=item.get("title", ""),
-                    clinical_significance=classification.get("description")
+                    protein_change=protein_change,
+                    original_residue=(
+                        parsed["original_residue"]
+                        if parsed else None
+                    ),
+                    position=(
+                        parsed["position"]
+                        if parsed else None
+                    ),
+                    new_residue=(
+                        parsed["new_residue"]
+                        if parsed else None
+                    ),
+                    clinical_significance=classification.get(
+                        "description"
+                    ),
+                    sequence=sequence
                 )
             )
-
+        print(mutations)
         return mutations
 
 class Mutations:
@@ -220,7 +289,7 @@ class ProteinService:
         if uniprot.get("genes"):
             gene_name = uniprot["genes"][0]["geneName"]["value"]
 
-        mutations = await self.clinvar.search(gene_name)
+        mutations = await self.clinvar.search(gene_name, query)
 
         return Protein(
             query=query,
