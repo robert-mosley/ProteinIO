@@ -40,10 +40,10 @@ export default function TopNav({ onSearch, currentQuery }: Props) {
   }, [])
 
   return (
-    <nav className="flex items-center gap-4 px-5 py-3 border-b border-[#0f2040] bg-[#080e1a]/95 backdrop-blur-sm sticky top-0 z-50">
+    <nav className="top-nav flex items-center gap-4 px-5 py-3 border-b sticky top-0 z-50">
       {/* Logo */}
       <div className="flex items-center gap-2.5 min-w-fit">
-        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-cyan-500/20">
+        <div className="brand-mark w-8 h-8 rounded-lg flex items-center justify-center">
           <Dna className="w-4 h-4 text-white" />
         </div>
         <div>
@@ -54,7 +54,7 @@ export default function TopNav({ onSearch, currentQuery }: Props) {
 
       {/* Search */}
       <div className="flex-1 max-w-2xl mx-auto">
-        <div className="flex items-center gap-2 bg-[#0d1b30] border border-[#1a3355] rounded-xl px-3.5 py-2 focus-within:border-cyan-500/50 focus-within:shadow-[0_0_0_1px_rgba(6,182,212,0.2)] transition-all duration-150">
+        <div className="search-shell flex items-center gap-2 border rounded-xl px-3.5 py-2 transition-all duration-150">
           {isLoading
             ? <Loader2 className="w-4 h-4 text-cyan-400 flex-shrink-0 animate-spin" />
             : <Search className="w-4 h-4 text-slate-500 flex-shrink-0" />
@@ -79,7 +79,7 @@ export default function TopNav({ onSearch, currentQuery }: Props) {
           <button
             onClick={handleSearch}
             disabled={!q.trim() || isLoading}
-            className="px-3 py-1.5 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-[#080e1a] text-xs font-bold disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-150 flex-shrink-0"
+            className="accent-control px-3 py-1.5 rounded-lg text-xs font-bold disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-150 flex-shrink-0"
           >
             Search
           </button>
@@ -88,7 +88,7 @@ export default function TopNav({ onSearch, currentQuery }: Props) {
 
       {/* Status badge */}
       {currentQuery && (
-        <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#0d1b30] border border-[#1a3355] text-xs text-slate-400 font-mono max-w-[180px]">
+        <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-lg quiet-control border text-xs font-mono max-w-[180px]">
           <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 flex-shrink-0 animate-pulse" />
           <span className="truncate">{currentQuery}</span>
         </div>

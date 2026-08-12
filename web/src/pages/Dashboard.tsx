@@ -43,9 +43,9 @@ export default function Dashboard() {
   }, [selectedPdb, generatedPdb])
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#080e1a]">
+    <div className="app-shell min-h-screen flex flex-col">
       <TopNav onSearch={handleSearch} currentQuery={query} />
-      <div className="flex flex-1 overflow-hidden">
+      <div className="workspace-shell flex flex-1 overflow-hidden">
         <LeftSidebar history={history} onSelectHistory={handleSearch} />
         <CenterViewer query={query} selectedPdb={selectedPdb} generatedPdb={generatedPdb} highlight={highlight} />
         <RightPanel proteinQuery={query} setSelectedPdb={setSelectedPdb} setGeneratedPdb={setGeneratedPdb} setHighlight={setHighlight} />

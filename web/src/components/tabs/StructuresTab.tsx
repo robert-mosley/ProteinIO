@@ -29,7 +29,7 @@ export default function StructuresTab({ query, setSelectedPdb }: Props) {
         <div className="w-12 h-12 rounded-full border border-dashed border-[#1a3355] flex items-center justify-center">
           <Layers className="w-6 h-6 text-slate-700" />
         </div>
-        <div className="text-sm text-slate-600">Search to view PDB structures</div>
+        <div className="text-sm text-slate-400">Search to view PDB structures</div>
       </div>
     )
   }
@@ -38,7 +38,7 @@ export default function StructuresTab({ query, setSelectedPdb }: Props) {
     return (
       <div className="space-y-3">
         {[...Array(2)].map((_, i) => (
-          <div key={i} className="rounded-xl border border-[#1a3355] bg-[#0d1829] p-4 space-y-2">
+          <div key={i} className="surface-card rounded-xl border p-4 space-y-2">
             <div className="shimmer h-3 rounded w-24" />
             <div className="shimmer h-3 rounded w-full" />
             <div className="shimmer h-3 rounded w-3/4" />
@@ -64,7 +64,7 @@ export default function StructuresTab({ query, setSelectedPdb }: Props) {
       </div>
 
       {structures.map((s) => (
-        <div key={s.id} className="rounded-xl border border-[#1a3355] bg-[#0d1829] overflow-hidden hover:border-[#2a4a6e] transition-colors">
+        <div key={s.id} className="surface-card rounded-xl border overflow-hidden transition-colors">
           <div className="p-4">
             <div className="flex items-center gap-2 mb-2">
               <code className="text-sm font-mono font-bold text-cyan-400">{s.id}</code>
@@ -78,7 +78,7 @@ export default function StructuresTab({ query, setSelectedPdb }: Props) {
           <div className="flex gap-2 px-4 pb-4">
             <button
               onClick={() => setSelectedPdb(s.download_url)}
-              className="flex-1 px-3 py-2 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/20 hover:border-cyan-500/40 text-cyan-400 text-xs font-medium flex items-center justify-center gap-1.5 transition-all"
+               className="flex-1 px-3 py-2 rounded-lg bg-cyan-400/10 hover:bg-cyan-400/20 border border-cyan-400/30 hover:border-cyan-300/50 text-cyan-200 text-xs font-medium flex items-center justify-center gap-1.5 transition-all"
             >
               <ExternalLink className="w-3.5 h-3.5" />
               Open Viewer
@@ -86,7 +86,7 @@ export default function StructuresTab({ query, setSelectedPdb }: Props) {
             <a
               href={s.download_url}
               download
-              className="flex-1 px-3 py-2 rounded-lg bg-[#0a1628] hover:bg-[#0d1b30] border border-[#1a3355] hover:border-[#2a4a6e] text-white hover:text-white text-xs font-medium flex items-center justify-center gap-1.5 transition-all"
+               className="quiet-control flex-1 px-3 py-2 rounded-lg border text-xs font-medium flex items-center justify-center gap-1.5 transition-all"
             >
               <Download className="w-3.5 h-3.5" />
               Download PDB

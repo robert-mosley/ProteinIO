@@ -43,11 +43,11 @@ function MutationCard({ m, selected, onClick, onDoubleClick }: CardProps) {
       onDoubleClick={onDoubleClick}
       title="Double-click to open workspace"
       className={`
-        rounded-xl border bg-[#0d1829] overflow-hidden cursor-pointer select-none
+        surface-card rounded-xl border overflow-hidden cursor-pointer select-none
         transition-all duration-150 fade-in group
         ${selected
           ? 'border-cyan-500/50 ring-1 ring-cyan-500/20 shadow-[0_0_12px_rgba(6,182,212,0.08)]'
-          : 'border-[#1a3355] hover:border-[#2a4a6e] hover:shadow-md hover:shadow-black/30'}
+          : 'border-[#2b3b4a] hover:border-[#3c5263] hover:shadow-md hover:shadow-black/30'}
       `}
     >
       {/* Card body */}
@@ -55,7 +55,7 @@ function MutationCard({ m, selected, onClick, onDoubleClick }: CardProps) {
         <div className="flex items-start gap-2.5">
           {/* Icon */}
           <div className={`mt-0.5 w-7 h-7 rounded-lg border flex items-center justify-center flex-shrink-0 transition-colors ${
-            selected ? 'bg-cyan-500/10 border-cyan-500/30' : 'bg-[#0a1628] border-[#1a3355]'
+            selected ? 'bg-cyan-400/10 border-cyan-300/40' : 'bg-[#121a23] border-[#2b3b4a]'
           }`}>
             <Dna className={`w-3.5 h-3.5 transition-colors ${selected ? 'text-cyan-400' : 'text-cyan-500/60'}`} />
           </div>
@@ -81,7 +81,7 @@ function MutationCard({ m, selected, onClick, onDoubleClick }: CardProps) {
       </div>
 
       {/* Card footer */}
-      <div className="flex items-center gap-2 px-3.5 py-2 border-t border-[#0f2040] bg-[#080e1a]/40">
+      <div className="flex items-center gap-2 px-3.5 py-2 border-t border-[#2b3b4a] bg-[#0b1117]/45">
         <code className="text-[10px] font-mono text-slate-400 flex-1 truncate" title={m.accession}>
           {m.accession || '—'}
         </code>
@@ -144,7 +144,7 @@ export default function MutationsTab({ query }: { query: string | null }) {
         <div className="w-12 h-12 rounded-full border border-dashed border-[#1a3355] flex items-center justify-center">
           <Dna className="w-6 h-6 text-slate-500" />
         </div>
-        <div className="text-sm text-slate-300">Search for a protein to view its mutations</div>
+         <div className="text-sm text-slate-400">Search for a protein to view its mutations</div>
       </div>
     )
   }
@@ -185,7 +185,7 @@ export default function MutationsTab({ query }: { query: string | null }) {
           <div className="relative">
             <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-500 pointer-events-none" />
             <input
-              className="w-full pl-8 pr-3 py-2 rounded-lg bg-[#0d1b30] border border-[#1a3355] text-xs text-white placeholder-slate-600 focus:border-cyan-500/40 focus:outline-none transition font-mono"
+            className="w-full pl-8 pr-3 py-2 rounded-lg bg-[#17222d] border border-[#2b3b4a] text-xs text-white placeholder-slate-400 focus:border-cyan-300/60 focus:outline-none transition font-mono"
               placeholder="Filter by title, accession, source, significance…"
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
@@ -205,7 +205,7 @@ export default function MutationsTab({ query }: { query: string | null }) {
         ) : items.length === 0 ? (
           <div className="flex flex-col items-center gap-2 py-8 text-center">
             <AlertCircle className="w-5 h-5 text-slate-700" />
-            <div className="text-xs text-slate-600">No mutations match your filter</div>
+             <div className="text-xs text-slate-400">No mutations match your filter</div>
             <button onClick={() => setFilter('')} className="text-[10px] text-cyan-600 hover:text-cyan-400 transition">
               Clear filter
             </button>

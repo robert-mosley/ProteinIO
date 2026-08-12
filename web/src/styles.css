@@ -1,41 +1,165 @@
 @import "tailwindcss";
 
-/* ── Force dark theme globally ── */
 :root {
   color-scheme: dark;
+  --io-bg: #0b1117;
+  --io-surface: #121a23;
+  --io-surface-raised: #17222d;
+  --io-surface-soft: #1d2a36;
+  --io-border: #2b3b4a;
+  --io-border-strong: #3c5263;
+  --io-text: #f1f5f9;
+  --io-muted: #a7b5c4;
+  --io-subtle: #718195;
+  --io-accent: #54d6d0;
+  --io-accent-strong: #a1f1eb;
 }
 
 html, body, #root {
   height: 100%;
-  background-color: #080e1a;
-  color: #e2e8f0;
+  background: var(--io-bg);
+  color: var(--io-text);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
 }
 
-/* Inputs: white text, white caret, dark background */
 input, textarea, select {
-  color: #e2e8f0 !important;
+  color: var(--io-text) !important;
   background-color: transparent;
-  caret-color: #e2e8f0;
+  caret-color: var(--io-accent);
 }
 
 input::placeholder, textarea::placeholder {
-  color: #475569 !important;
+  color: var(--io-subtle) !important;
   opacity: 1;
 }
 
-/* Buttons inherit parent text color unless a Tailwind class overrides */
 button {
   background: transparent;
 }
 
-/* Custom scrollbar */
-::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar { width: 7px; height: 7px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #1e3a5f; border-radius: 4px; }
-::-webkit-scrollbar-thumb:hover { background: #2d5a8e; }
+::-webkit-scrollbar-thumb { background: #344858; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #4b6374; }
+
+.app-shell {
+  background: var(--io-bg);
+}
+
+.top-nav {
+  background: rgba(11, 17, 23, 0.94);
+  border-color: var(--io-border);
+}
+
+.brand-mark {
+  background: linear-gradient(135deg, #4dd4d0 0%, #4f83d8 100%);
+  box-shadow: 0 8px 24px rgba(52, 211, 204, 0.16);
+}
+
+.search-shell {
+  background: var(--io-surface);
+  border-color: var(--io-border);
+}
+
+.search-shell:focus-within {
+  border-color: rgba(84, 214, 208, 0.7);
+  box-shadow: 0 0 0 3px rgba(84, 214, 208, 0.11);
+}
+
+.sidebar-shell,
+.right-panel {
+  border-color: var(--io-border);
+  background: #0f171f;
+}
+
+.panel-content {
+  background: #111a23;
+}
+
+.workspace-shell {
+  min-height: 0;
+}
+
+.viewer-shell {
+  background: #0d151d;
+  border-color: var(--io-border-strong);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.18);
+}
+
+.viewer-toolbar {
+  background: rgba(18, 26, 35, 0.92);
+  border-color: var(--io-border);
+}
+
+.surface-card {
+  background: var(--io-surface-raised);
+  border-color: var(--io-border);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.09);
+}
+
+.surface-card:hover {
+  border-color: var(--io-border-strong);
+}
+
+.quiet-control {
+  background: var(--io-surface);
+  border-color: var(--io-border);
+  color: var(--io-muted);
+}
+
+.quiet-control:hover {
+  background: var(--io-surface-soft);
+  border-color: var(--io-border-strong);
+  color: var(--io-text);
+}
+
+.accent-control {
+  background: var(--io-accent);
+  color: #0b171b;
+}
+
+.accent-control:hover {
+  background: var(--io-accent-strong);
+}
+
+.empty-state-icon {
+  border-color: var(--io-border-strong);
+  background: rgba(29, 42, 54, 0.56);
+}
+
+.grid-bg {
+  background-image:
+    linear-gradient(rgba(84, 214, 208, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(84, 214, 208, 0.045) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+@media (max-width: 1100px) {
+  .right-panel {
+    width: 360px;
+  }
+}
+
+@media (max-width: 860px) {
+  .workspace-shell {
+    flex-direction: column;
+    overflow-y: auto;
+  }
+
+  .workspace-shell > .flex-1 {
+    min-height: 520px;
+    flex: none;
+  }
+
+  .right-panel {
+    width: 100%;
+    min-height: 420px;
+    border-left: 0;
+    border-top: 1px solid var(--io-border);
+  }
+}
 
 /* Shimmer skeleton */
 @keyframes shimmer {
@@ -43,7 +167,7 @@ button {
   100% { background-position:  200% 0; }
 }
 .shimmer {
-  background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%);
+  background: linear-gradient(90deg, #1a2631 25%, #2c3d4b 50%, #1a2631 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
 }

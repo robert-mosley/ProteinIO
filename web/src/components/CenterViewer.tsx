@@ -26,9 +26,9 @@ export default function CenterViewer({ query, selectedPdb, generatedPdb, highlig
 
   return (
     <div className="flex-1 p-4 overflow-hidden">
-      <div className="h-full rounded-2xl border border-[#0f2040] bg-[#080e1a] grid-bg relative overflow-hidden flex flex-col">
+      <div className="viewer-shell h-full rounded-2xl border grid-bg relative overflow-hidden flex flex-col">
         {/* Top bar */}
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-[#0f2040] bg-[#08111e]/80 backdrop-blur-sm">
+        <div className="viewer-toolbar flex items-center gap-3 px-4 py-3 border-b backdrop-blur-sm">
           <div className="flex gap-1.5">
             <div className="w-3 h-3 rounded-full bg-[#1a3355]" />
             <div className="w-3 h-3 rounded-full bg-[#1a3355]" />
@@ -59,7 +59,7 @@ export default function CenterViewer({ query, selectedPdb, generatedPdb, highlig
               // Query active but no structure selected / none available
               <>
                 <div className="relative">
-                  <div className="relative w-20 h-20 rounded-full border border-[#1a3355] bg-[#0d1b30]/50 flex items-center justify-center">
+                  <div className="empty-state-icon relative w-20 h-20 rounded-full border flex items-center justify-center">
                     <Atom className="w-10 h-10 text-slate-600" strokeWidth={1} />
                   </div>
                 </div>
@@ -77,7 +77,7 @@ export default function CenterViewer({ query, selectedPdb, generatedPdb, highlig
               <>
                 <div className="relative">
                   <div className="absolute inset-0 rounded-full bg-cyan-500/5 animate-ping" style={{ animationDuration: '3s' }} />
-                  <div className="relative w-20 h-20 rounded-full border border-cyan-500/20 bg-[#0d1b30]/50 flex items-center justify-center">
+                  <div className="empty-state-icon relative w-20 h-20 rounded-full border border-cyan-500/30 flex items-center justify-center">
                     <Atom className="w-10 h-10 text-cyan-500/40" strokeWidth={1} />
                   </div>
                 </div>
@@ -89,7 +89,7 @@ export default function CenterViewer({ query, selectedPdb, generatedPdb, highlig
                 </div>
                 <div className="flex flex-wrap gap-2 justify-center mt-2">
                   {['BRCA1', 'TP53', 'EGFR', 'KRAS', 'MSH6'].map((example) => (
-                    <span key={example} className="px-2.5 py-1 rounded-lg bg-[#0d1b30] border border-[#1a3355] text-xs font-mono text-slate-300">
+                    <span key={example} className="quiet-control px-2.5 py-1 rounded-lg border text-xs font-mono">
                       {example}
                     </span>
                   ))}
