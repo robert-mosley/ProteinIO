@@ -1,0 +1,49 @@
+build/
+bin/
+
+.gradle/
+.settings/
+.project
+.classpath
+
+.idea
+*.iml
+*.ipr
+*.iws
+*.class
+*~
+classes/
+
+logs/*
+*.log
+out/*
+*.stackdump
+
+/local*
+
+!*.pdb
+!releases
+!lib/*
+!*.md
+
+venv/
+tmp
+pastebin.txt
+
+# P2Rank distro
+distro/bin/
+distro/log/*
+distro/test_output/
+distro/README.md
+
+pastebin.txt
+
+CLAUDE.local.md
+.claude/*
+# keep committed Claude Code skills tracked (everything else under .claude/, e.g.
+# settings.local.json, stays ignored)
+!.claude/skills/
+
+# bench artifacts (pocket_grid_features_bench.sh)
+jfr-*.jfr
+misc/test-scripts/bench-results.csv

@@ -1,0 +1,262 @@
+//file:noinspection SpellCheckingInspection
+//file:noinspection GroovyAssignabilityCheck
+
+
+buildscript {  // for "com.github.ben-manes.versions" plugin
+    repositories {
+        maven {
+            url = "https://plugins.gradle.org/m2/"
+        }
+    }
+    dependencies {
+        classpath "com.github.ben-manes:gradle-versions-plugin:0.54.0"
+    }
+}
+
+plugins {
+    id 'java'
+    id 'groovy'
+    id 'com.adarshr.test-logger' version '4.0.0'
+}
+
+apply plugin: "com.github.ben-manes.versions"   //  ./gradlew dependencyUpdates
+
+
+group = 'cz.siret'
+version = '2.6-alpha.5'
+
+description = 'Ligand binding site prediction based on machine learning.'
+
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+
+def distroDir = "$projectDir/distro"
+
+repositories {
+    mavenCentral()
+    mavenLocal()
+    maven {
+        url = file('lib/local-mvn-repo')
+    }
+    flatDir(dirs: 'lib')
+}
+
+sourceSets {
+    main {
+        resources {
+            exclude 'scripts/out/*'
+            exclude 'models/*'
+        }
+    }
+}
+
+
+processResources {
+    filter org.apache.tools.ant.filters.ReplaceTokens, tokens: [
+            "project_version": project.version
+    ]
+}
+
+tasks.register('copyDependenciesToDist', Sync) {
+    // Sync (not Copy) so renamed/removed transitive deps don't leave stale
+    // jars in distro/bin/lib — a stale ejml-core-0.39.jar shadowing the
+    // resolved 0.43.1 caused a NoSuchFieldError at runtime once.
+    from configurations.runtimeClasspath
+    into "$distroDir/bin/lib"
+}
+
+tasks.register('copyBinaryToDist', Copy) {
+    dependsOn jar
+
+    from "$projectDir/build/bin"
+    into "$distroDir/bin"
+    include "*.jar"
+}
+
+tasks.register('copyDocumentation', Copy) {
+    from "$distroDir/../"
+    into "$distroDir"
+    include "README.md", "LICENSE.txt"
+}
+
+assemble {
+    dependsOn processResources
+    dependsOn copyBinaryToDist
+    dependsOn copyDependenciesToDist // copy dependencies to distro dir
+    dependsOn copyDocumentation
+}
+
+jar {
+    archiveFileName = "p2rank.jar"
+    destinationDirectory = file("build/bin")
+
+    manifest {
+        attributes 'Main-Class': 'cz.siret.prank.program.Main'
+    }
+}
+
+clean {
+    delete "$distroDir/bin"
+    delete "$distroDir/test_output"
+}
+
+test {
+    useJUnitPlatform()
+
+    // Gradle detects overlap: test inputs (distro/test_data, models, config) vs copyDocumentation output (distro/).
+    // mustRunAfter establishes ordering without forcing copyDocumentation to run for local test-only builds.
+    mustRunAfter copyDocumentation
+
+    // Tests run SERIALLY by default (one test JVM). Pass -PmaxParallelForks=N to distribute
+    // test classes across N independent test JVMs; ./unit-tests-parallel.sh does this for you.
+    // Each fork has its own Params.INSTANCE (a static singleton), so there is no cross-test
+    // interference from that global mutable state. NOTE: @Isolated/@ResourceLock are per-JVM
+    // and do NOT coordinate across forks, so tests must not write to shared filesystem paths;
+    // each test owns a distinct distro/test_output/<name> subdir. Wall time is floored by the
+    // slowest single test class (Gradle assigns whole classes to forks), so beyond ~4-6 forks
+    // there is no gain and JVM startup overhead makes it slower.
+    maxParallelForks = (project.findProperty('maxParallelForks') ?: 1) as int
+
+    // show standard out and standard error of the test JVM(s) on the console
+    // testLogging.showStandardStreams = true
+
+    // set heap size for the test JVM(s)
+    maxHeapSize = "2g"
+
+    // JVM flags for test compatibility with Java 17+
+    // --add-opens: required by Apache Arrow and Netty for direct memory access via sun.misc.Unsafe
+    // --enable-native-access: required by zstd-jni for native library loading
+    jvmArgs '--add-opens=java.base/java.nio=ALL-UNNAMED',
+            '--enable-native-access=ALL-UNNAMED'
+    // --sun-misc-unsafe-memory-access: suppresses warnings from parquet-hadoop CleanUtil
+    // which uses sun.misc.Unsafe (upstream unfixed). Only available in Java 23+.
+    if (JavaVersion.current() >= JavaVersion.VERSION_23) {
+        jvmArgs '--sun-misc-unsafe-memory-access=allow'
+    }
+    // --add-modules jdk.incubator.vector: lets the test JVM exercise the SIMD occlusion scan + SIMD
+    // neighbor build in the faster-molecular-surface library (surface_strategy=packed_distinct_v4).
+    // Output is bit-identical to the scalar fallback. Guarded on the module actually being present so CI on a stripped or
+    // future JDK without it still runs (the Gradle JVM shares the JDK used for the test forks).
+    if (ModuleLayer.boot().findModule('jdk.incubator.vector').isPresent()) {
+        jvmArgs '--add-modules=jdk.incubator.vector'
+    }
+
+    // Forward kdtree benchmark properties to test JVM
+    systemProperties System.properties.subMap([
+        'kdtree.benchmark', 'kdtree.points', 'kdtree.queries',
+        'kdtree.iterations', 'kdtree.seed', 'kdtree.radii'
+    ])
+
+    inputs.dir "$distroDir/test_data"
+    inputs.files("$distroDir/models", "$distroDir/config/default.groovy")
+
+    testLogging {
+        // Minimal config — com.adarshr.test-logger plugin handles console rendering.
+        // Keep 'failed' so Gradle's own summary still reports failures.
+        events 'failed'
+
+        showExceptions = true
+        exceptionFormat = "full"
+        showCauses = true
+        showStackTraces = true
+
+        showStandardStreams = false
+    }
+
+    testlogger {
+        theme = 'mocha'
+        showPassed = true
+        showSkipped = true
+        showFailed = true
+        showStandardStreams = false
+        slowThreshold = 2000
+    }
+
+    // listen to standard out and standard error of the test JVM(s)
+    //    onOutput { descriptor, event ->
+    //        logger.lifecycle("Test: " + descriptor + " produced standard out/err: " + event.message )
+    //    }
+    
+}
+
+configurations {
+    runtimeClasspath.extendsFrom implementation
+    all {
+        exclude group: 'openchart', module: 'openchart' // unavailable transitive dep from forester
+    }
+}
+
+/**
+ * Returns an int representing how mature [version] is.
+ * Higher numbers are more mature.
+ */
+static def maturityLevel(String version) {
+    /**
+     * Version qualifiers, in order from least to most mature.
+     * The most mature is to have no qualifier at all.
+     */
+    def qualifiers = ["preview", "alpha", "beta", "m", "cr", "rc"]
+    def qualifiersRegex = qualifiers.collect { /(?i).*[.\-]$it[.\-\d]*/ }
+
+    def index = qualifiersRegex.findIndexOf { version ==~ it }
+    return (index < 0) ? qualifiers.size() : index
+}
+
+tasks.named("dependencyUpdates").configure {
+    rejectVersionIf {
+        def candidateMaturity = maturityLevel(it.candidate.version)
+        def currentMaturity = maturityLevel(it.currentVersion)
+        candidateMaturity < currentMaturity
+    }
+}
+
+
+dependencies {
+
+    implementation 'org.apache.groovy:groovy:5.0.7'
+    implementation 'org.apache.commons:commons-lang3:3.20.0'
+    implementation 'com.carrotsearch:hppc:0.10.0'   // primitive collections (LongIntHashMap in pocket grid)
+    implementation 'org.apache.commons:commons-math3:3.6.1'
+    implementation 'org.ejml:ejml-all:0.46.0'   // eigendecomposition for ANM features (physics/AnmModel)
+    implementation 'commons-io:commons-io:2.22.0'
+    implementation 'com.google.guava:guava:33.6.0-jre'
+    implementation 'com.google.code.gson:gson:2.14.0'
+    implementation 'com.univocity:univocity-parsers:2.9.1' // csv parser
+    implementation 'org.apache.commons:commons-csv:1.14.1'
+    implementation 'org.zeroturnaround:zt-zip:1.18.2'
+    implementation 'org.apache.commons:commons-compress:1.28.0'
+    implementation 'org.tukaani:xz:1.12'
+    implementation 'com.github.luben:zstd-jni:1.5.7-11'
+    implementation 'com.github.dpaukov:combinatoricslib3:3.4.0'
+    implementation 'us.ihmc:euclid:0.22.5'
+
+    implementation 'org.apache.arrow:arrow-vector:19.0.0'
+    implementation 'org.apache.arrow:arrow-memory-netty:19.0.0'
+    implementation 'blue.strategic.parquet:parquet-floor:2.1'
+
+    implementation 'org.slf4j:slf4j-api:2.0.18'
+    implementation 'org.slf4j:jul-to-slf4j:2.0.18'         // for netlib logging messages
+    implementation 'org.apache.logging.log4j:log4j-core:2.26.1'
+    implementation 'org.apache.logging.log4j:log4j-slf4j2-impl:2.26.1'
+
+    implementation 'org.biojava:biojava-core:7.2.5'
+    implementation 'org.biojava:biojava-alignment:7.2.5'
+    implementation 'org.biojava:biojava-structure:7.2.5-rdk.1' // forked version with new parseSites param
+
+    implementation 'org.openscience.cdk:cdk-qsarmolecular:2.12'    // for NumericalSurface class
+    implementation 'org.openscience.cdk:cdk-silent:2.12'           // for Atom class
+
+    implementation 'cz.cuni.cusbg:faster-molecular-surface:1.8'
+    implementation 'cz.siret.prank:FasterForest:2.13.0'
+
+    implementation 'nz.ac.waikato.cms.weka:weka-dev:3.9.6'
+
+    implementation fileTree(dir: 'lib', include: '*.jar')
+
+    testImplementation 'org.junit.jupiter:junit-jupiter:6.1.1'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+}

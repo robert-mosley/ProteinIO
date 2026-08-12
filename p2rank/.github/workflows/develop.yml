@@ -1,0 +1,38 @@
+name: Develop Build
+
+on:
+  push:
+    branches: [ develop ]
+  pull_request:
+    branches: [ develop ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+
+jobs:
+  build: 
+
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+
+    strategy:
+      matrix:
+        os: [ ubuntu-latest, windows-latest, macos-latest ]
+        java-version: [ '17', '21', '25', '26' ]
+
+    steps:
+    - uses: actions/checkout@v5
+    - name: Set up JDK ${{ matrix.java-version }}
+      uses: actions/setup-java@v5
+      with:
+        java-version: ${{ matrix.java-version }}
+        distribution: 'oracle'
+        cache: 'gradle'
+
+    - name: Check dependencies
+      run: ./gradlew dependencies
+
+    - name: Build and test
+      run: ./gradlew build
