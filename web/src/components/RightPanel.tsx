@@ -10,12 +10,13 @@ type Tab = 'protein' | 'structures' | 'mutations' | 'ai'
 
 type Props = {
   proteinQuery: string | null
+  searchVersion: number
   setSelectedPdb: (url: string | null) => void
   setGeneratedPdb: (pdb: string | null) => void
   setHighlight?: (highlight: { chain: string; residue: number } | null) => void
 }
 
-export default function RightPanel({ proteinQuery, setSelectedPdb, setGeneratedPdb, setHighlight }: Props) {
+export default function RightPanel({ proteinQuery, searchVersion, setSelectedPdb, setGeneratedPdb, setHighlight }: Props) {
   const [tab, setTab] = React.useState<Tab>('protein')
   const { data } = useProtein(proteinQuery)
 
@@ -28,7 +29,7 @@ export default function RightPanel({ proteinQuery, setSelectedPdb, setGeneratedP
       // Data loaded but no structures
       setSelectedPdb(null)
     }
-  }, [data])
+  }, [data, proteinQuery, searchVersion, setGeneratedPdb, setSelectedPdb])
 
   const tabs: { id: Tab; label: string; icon: React.ReactNode; count?: number }[] = [
     { id: 'protein',    label: 'Protein',    icon: <Microscope className="w-3.5 h-3.5" /> },

@@ -76,7 +76,6 @@ export default function CenterViewer({ query, selectedPdb, generatedPdb, highlig
               // No query yet — default placeholder
               <>
                 <div className="relative">
-                  <div className="absolute inset-0 rounded-full bg-cyan-500/5 animate-ping" style={{ animationDuration: '3s' }} />
                   <div className="empty-state-icon relative w-20 h-20 rounded-full border border-cyan-500/30 flex items-center justify-center">
                     <Atom className="w-10 h-10 text-cyan-500/40" strokeWidth={1} />
                   </div>

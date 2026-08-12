@@ -10,6 +10,7 @@ const MAX_HISTORY = 10
 
 export default function Dashboard() {
   const [query, setQuery] = React.useState<string | null>(null)
+  const [searchVersion, setSearchVersion] = React.useState(0)
   const [history, setHistory] = React.useState<string[]>([])
   const [selectedPdb, setSelectedPdb] = React.useState<string | null>(null)
   const [generatedPdb, setGeneratedPdb] = React.useState<string | null>(null)
@@ -17,8 +18,20 @@ export default function Dashboard() {
 
   function handleSearch(q: string) {
     const val = q.trim() || null
+    const isSameQuery = val?.toLowerCase() === query?.toLowerCase()
+
     setQuery(val)
-    setSelectedPdb(null)
+    setSearchVersion((version) => version + 1)
+    setGeneratedPdb(null)
+    setHighlight(null)
+
+    // Keep the current structure when the user submits the same protein again.
+    // React Query returns the cached result for the same key, so clearing the
+    // viewer here would otherwise leave it empty until another state changes.
+    if (!isSameQuery) {
+      setSelectedPdb(null)
+    }
+
     if (val) {
       setHistory((prev) => {
         const filtered = prev.filter((h) => h.toLowerCase() !== val.toLowerCase())
@@ -48,7 +61,13 @@ export default function Dashboard() {
       <div className="workspace-shell flex flex-1 overflow-hidden">
         <LeftSidebar history={history} onSelectHistory={handleSearch} />
         <CenterViewer query={query} selectedPdb={selectedPdb} generatedPdb={generatedPdb} highlight={highlight} />
-        <RightPanel proteinQuery={query} setSelectedPdb={setSelectedPdb} setGeneratedPdb={setGeneratedPdb} setHighlight={setHighlight} />
+        <RightPanel
+          proteinQuery={query}
+          searchVersion={searchVersion}
+          setSelectedPdb={setSelectedPdb}
+          setGeneratedPdb={setGeneratedPdb}
+          setHighlight={setHighlight}
+        />
       </div>
     </div>
   )

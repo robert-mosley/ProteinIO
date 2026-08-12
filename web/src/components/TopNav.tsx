@@ -39,6 +39,11 @@ export default function TopNav({ onSearch, currentQuery }: Props) {
     return () => window.removeEventListener('keydown', down)
   }, [])
 
+  // Keep the visible search field in sync when a recent search is selected.
+  React.useEffect(() => {
+    if (currentQuery) setQ(currentQuery)
+  }, [currentQuery])
+
   return (
     <nav className="top-nav flex items-center gap-4 px-5 py-3 border-b sticky top-0 z-50">
       {/* Logo */}
