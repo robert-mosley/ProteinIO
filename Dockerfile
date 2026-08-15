@@ -6,14 +6,16 @@ RUN apt-get update && \
         bash \
     && rm -rf /var/lib/apt/lists/*
 
+WORKDIR /app
+
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-RUN chmod +x /app/p2rank/prank.sh
+RUN chmod +x /app/p2rank/distro/prank
 
-ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+ENV JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64
 ENV PATH="${JAVA_HOME}/bin:${PATH}"
 
 CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
