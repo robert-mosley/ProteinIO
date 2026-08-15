@@ -181,8 +181,11 @@ def design_protein(sequence):
 
 @app.post("/generateStructure")
 def structure(sequence):
-    prodes = ProteinDesign()
-    return prodes.generate_structure(sequence)
+    api_url = "https://ebi.ac.uk"
+    response = requests.get(api_url, params={"id": sequence})
+    pdbUrl = response[0]["pdbUrl"]
+
+    return {"url": pdbUrl}
 
 @app.post("/queryProtein")
 async def queryProtein(query):
@@ -264,3 +267,7 @@ async def mutation(request: MutationRequest):
         "sequence": mutated_sequence,
         "pdb": mutant_pdb
     }
+
+@app.get("/health")
+async def health():
+    return {"status": "ok"}
