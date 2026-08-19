@@ -11,4 +11,4 @@ jobs:
 
     steps:
       - name: Ping Render
-        run: curl -f https://proteinio.onrender.com/health
+        run: curl -f https://proteinio-1.onrender.com/health

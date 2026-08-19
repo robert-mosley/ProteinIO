@@ -12,6 +12,7 @@ import llm as llm_module
 from fastapi.responses import FileResponse
 from pathlib import Path
 from typing import Optional
+import time
 
 app = FastAPI()
 
@@ -215,58 +216,51 @@ async def mutation_query(accession: MutationQuery, session_id: Optional[str] = N
     return {"description": result["description"], "pdb_string": result["pdb_string"]}
 
 @app.post("/mutation")
-async def mutation(request: MutationRequest):
+async def mutation_seq(sequence, protein_change):
+    res_num = protein_change[1:-1]
+    init_res = protein_change[1]
+    final_res = protein_change[-1]
+    sequence[res_num] = final_res
 
-    sequence = request.sequence.upper()
-    new_residue = request.new_residue.upper()
+    async with httpx.AsyncClient() as client:
+        response = await client.get("https://ebi.ac.uk", params={"sequence": sequence}, timeout=20)
+        response.raise_for_status()
+        job_data = response.json()
 
-    if not 1 <= request.position <= len(sequence):
-        raise HTTPException(
-            status_code=400,
-            detail="Residue position is outside the sequence."
+        job_id = job_data.get("job_id")
+        status_url = f"https://ebi.ac.uk/status/{job_id}"
+
+        while True:
+            status_response = client.get(status_url)
+            status_data = status_response.json()
+            job_status = status_data.get("status")
+
+            print(f"Job status: {job_status}...")
+            if job_status == "COMPLETED":
+                break
+            elif job_status in ["FAILED", "CANCELLED"]:
+                return "Search job failed on the server."
+
+            await asyncio.sleep(5)
+
+        results_url = (
+            f"https://ebi.ac.uk/results/{job_id}"
         )
+        results_response = client.get(results_url)
+        results_data = results_response.json()
 
-    if len(new_residue) != 1 or new_residue not in "ACDEFGHIKLMNPQRSTVWY":
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid amino acid."
-        )
+        found_alphafold = False
+        for entry in results_data.get("uniprot_entries", []):
+            for structure in entry.get("structures", []):
+                if structure.get("model_provider") == "AlphaFold DB":
+                    pdb_url = structure.get("model_url")
+                    uniprot_acc = entry.get("uniprot_accession")
 
-    index = request.position - 1
+                    print(f"\nFound AlphaFold Match for UniProt: {uniprot_acc}")
+                    print(f"Downloading PDB structure: {pdb_url}")
 
-    original_residue = sequence[index]
-
-    mutated_sequence = (
-        sequence[:index]
-        + new_residue
-        + sequence[index + 1:]
-    )
-
-    if original_residue == new_residue:
-        raise HTTPException(
-            status_code=400,
-            detail="New residue is the same as the original residue."
-        )
-
-    mutant_pdb = mutate_pdb(
-        pdb_string=pdb_string,
-        chain="A",
-        position=248,
-        mutant="Q",
-    )
-
-    return {
-        "position": request.position,
-        "original_residue": original_residue,
-        "new_residue": new_residue,
-        "mutation": (
-            f"{original_residue}"
-            f"{request.position}"
-            f"{new_residue}"
-        ),
-        "sequence": mutated_sequence,
-        "pdb": mutant_pdb
-    }
+                    file_data = await client.get(pdb_url).text
+                    return file_data
 
 @app.get("/health")
 async def health():
