@@ -112,6 +112,26 @@ class UniProtService:
 
         return mutations
 
+    async def get_domains(self, protein: dict) -> list[dict]:
+        domains = []
+        for feature in protein.get("features", []):
+            if feature.get("type") != "Domain":
+                continue
+
+            location = feature.get("location", {})
+            start = location.get("start", {}).get("value")
+            end = location.get("end", {}).get("value")
+            if start is None or end is None:
+                continue
+
+            domains.append({
+                "name": feature.get("description"),
+                "start": start,
+                "end": end,
+                "type": "Domain"
+            })
+
+        return domains
 
 class ClinVarService:
     def __init__(self):

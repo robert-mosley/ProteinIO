@@ -25,6 +25,7 @@ export interface Mutation {
   source: string
   accession: string
   title: string
+  protein_change: string
   clinical_significance: string | null
   chain: string
   position: number

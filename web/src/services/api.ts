@@ -1,6 +1,6 @@
 import { ChatResponse, ProteinResponse } from '../types'
 
-const API_BASE = 'https://proteinio-1.onrender.com'
+const API_BASE = '/api'
 
 class APIError extends Error {
   constructor(public status: number, message: string) {
@@ -68,13 +68,13 @@ export async function setCurrentPdb(pdb: string, sessionId: string): Promise<voi
   }
 }
 
-export async function getMutationInfo(sequence: string, position: number, new_residue: string): Promise<any> {
+export async function getMutationInfo(sequence: string, protein_change: string): Promise<any> {
   try {
-    console.log("getMutationInfo called with", sequence, position, new_residue);
+    console.log("getMutationInfo called with", sequence, protein_change);
     const res = await fetch(`${API_BASE}/mutation`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sequence, position, new_residue })
+      body: JSON.stringify({ sequence, protein_change })
     })
 
     if (!res.ok) {

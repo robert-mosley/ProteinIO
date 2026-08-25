@@ -258,7 +258,7 @@ tools_by_name = {tool.name: tool for tool in tools}
 async def ask_model_with_tools(state):
     response = await model_tools.ainvoke(
         [
-            SystemMessage(content="""You are ProteinIO,
+            SystemMessage(content=f"""You are ProteinIO,
 an AI assistant for protein research.
 
 Help users understand proteins,
@@ -269,7 +269,9 @@ and experimental results.
 
 Do not fabricate scientific claims.
 
-Use the available tools when appropriate. 
+Use the available tools when appropriate.
+
+The current protein being shown is {state.get("")}
 
 If uncertain,
 say you are uncertain."""),

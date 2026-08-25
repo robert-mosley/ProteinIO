@@ -236,7 +236,9 @@ export default function MutationWorkspace({ mutation, onClose, setHighlight, set
                 )}
               </div>
               <button
-                  onClick={() => mutationInfoService.MutationInfo(mutation.sequence, mutation.position, mutation.new_residue).then((info) => {
+                  onClick={() => mutationInfoService.MutationInfo(mutation.sequence, mutation.protein_change).then((info) => {
+                    console.log(mutation.sequence)
+                    console.log(mutation.protein_change)
                     console.log("Mutation info fetched:", info)
                     if (info?.pdb_string) {
                       setGeneratedPdb(info.pdb_string)

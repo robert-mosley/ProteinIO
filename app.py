@@ -13,6 +13,7 @@ from fastapi.responses import FileResponse
 from pathlib import Path
 from typing import Optional
 import time
+from services.MutationInterface import *
 
 app = FastAPI()
 
@@ -26,7 +27,7 @@ app.add_middleware(
 
 messages = {}
 session_current_pdbs = {}
-
+current_protein = None
 
 def get_messages(session_id):
     return messages.get(session_id, [])
@@ -42,8 +43,7 @@ class ProteinQuery(BaseModel):
 
 class MutationRequest(BaseModel):
     sequence: str
-    position: int
-    new_residue: str
+    protein_change: str
 
 class MissenseQuery(BaseModel):
     uniprot: str
@@ -59,6 +59,8 @@ class CurrentPdbQuery(BaseModel):
 @app.post("/getProtein")
 async def get_protein(protein: ProteinQuery):
     res = await ProteinService().search(protein.query)
+    global current_protein
+    current_protein = protein.query
 
     return {
         "protein": {
@@ -92,7 +94,9 @@ async def chat(question: ChatQuery):
         session_current_pdbs[question.session_id] = current_pdb
         llm_module.pdb_string = current_pdb
 
-    messages[question.session_id].append(HumanMessage(content=question.query))
+    text = "The current protein is " + current_protein + " response to user: " + question.query
+
+    messages[question.session_id].append(HumanMessage(content=text))
     state = {
         "messages": messages[question.session_id],
         "llm_calls": 0,
@@ -216,51 +220,246 @@ async def mutation_query(accession: MutationQuery, session_id: Optional[str] = N
     return {"description": result["description"], "pdb_string": result["pdb_string"]}
 
 @app.post("/mutation")
-async def mutation_seq(sequence, protein_change):
-    res_num = protein_change[1:-1]
-    init_res = protein_change[1]
-    final_res = protein_change[-1]
-    sequence[res_num] = final_res
+async def mutation_seq(req: MutationRequest):
+    req.sequence = req.sequence.replace("\n", "").replace(" ", "")
+    protein_changes = [
+        change.strip()
+        for change in req.protein_change.split(",")
+        if change.strip()
+    ]
+    for protein_change in protein_changes:
+        print(protein_change[1:-1])
+        pos = int(protein_change[1:-1])
+        final_res = protein_change[-1]
+
+        req.sequence = (
+            req.sequence[:pos - 1]
+            + final_res
+            + req.sequence[pos:]
+        )
+
+    mutation_sequence = req.sequence
 
     async with httpx.AsyncClient() as client:
-        response = await client.get("https://ebi.ac.uk", params={"sequence": sequence}, timeout=20)
-        response.raise_for_status()
-        job_data = response.json()
+        response = await client.post(
+            "https://www.ebi.ac.uk/Tools/hmmer/api/v1/search/phmmer",
+            json={
+                "database": "uniprot",
+                "input": req.sequence,
+            },
+            headers={
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+            },
+            timeout=30,
+        )
 
-        job_id = job_data.get("job_id")
-        status_url = f"https://ebi.ac.uk/status/{job_id}"
+        response.raise_for_status()
+        job_id = response.json()["id"]
+        result_url = (
+            f"https://www.ebi.ac.uk/Tools/hmmer/api/v1/result/{job_id}"
+        )
 
         while True:
-            status_response = client.get(status_url)
-            status_data = status_response.json()
-            job_status = status_data.get("status")
+            try:
+                result_response = await client.get(
+                    result_url,
+                    headers={"Accept": "application/json"},
+                    timeout=120,
+                )
 
-            print(f"Job status: {job_status}...")
-            if job_status == "COMPLETED":
-                break
-            elif job_status in ["FAILED", "CANCELLED"]:
-                return "Search job failed on the server."
+                result_response.raise_for_status()
+                result_data = result_response.json()
 
-            await asyncio.sleep(5)
+                status = result_data["status"]
 
-        results_url = (
-            f"https://ebi.ac.uk/results/{job_id}"
+                print(f"Job status: {status}")
+                if status == "SUCCESS":
+                    break
+                if status in ["FAILURE", "ERROR", "CANCELLED"]:
+                    raise RuntimeError(result_data)
+
+            except httpx.ReadTimeout:
+                print("Timeout; retrying...")
+
+            await asyncio.sleep(10)
+
+        hits = result_data["result"]["hits"]
+        best_hit = hits[0]
+        uniprot_acc = best_hit["metadata"]["uniprot_accession"]
+
+        print("UniProt:", uniprot_acc)
+
+        pdb_url = (
+            f"https://alphafold.ebi.ac.uk/files/"
+            f"AF-{uniprot_acc}-F1-model_v6.pdb"
         )
-        results_response = client.get(results_url)
-        results_data = results_response.json()
 
-        found_alphafold = False
-        for entry in results_data.get("uniprot_entries", []):
-            for structure in entry.get("structures", []):
-                if structure.get("model_provider") == "AlphaFold DB":
-                    pdb_url = structure.get("model_url")
-                    uniprot_acc = entry.get("uniprot_accession")
+        pdb_response = await client.get(
+            pdb_url,
+            timeout=60,
+        )
 
-                    print(f"\nFound AlphaFold Match for UniProt: {uniprot_acc}")
-                    print(f"Downloading PDB structure: {pdb_url}")
+        if pdb_response.status_code != 200:
+            return {
+                "error": "AlphaFold structure not found",
+                "uniprot_accession": uniprot_acc,
+            }
 
-                    file_data = await client.get(pdb_url).text
-                    return file_data
+        return {
+            "uniprot_accession": uniprot_acc,
+            "original_sequence": req.sequence,
+            "mutated_sequence": mutated_sequence,
+            "pdb_string": pdb_response.text,
+        }
+
+async def analyze_mutation(
+    protein,
+    pdb_text,
+    protein_change
+):
+
+    # -------------------------
+    # Parse mutation
+    # -------------------------
+
+    mutation = MutationService.parse_mutation(
+        protein_change
+    )
+
+    position = mutation["position"]
+    original = mutation["original"]
+    new = mutation["new"]
+
+    # -------------------------
+    # Validate sequence
+    # -------------------------
+
+    sequence = (
+        protein
+        .get("sequence", {})
+        .get("value", "")
+    )
+
+    if not sequence:
+
+        raise ValueError(
+            "Protein sequence not found"
+        )
+
+    if position > len(sequence):
+
+        raise ValueError(
+            f"Mutation position {position} "
+            f"is outside sequence length "
+            f"{len(sequence)}"
+        )
+
+    actual_residue = sequence[
+        position - 1
+    ]
+
+    if actual_residue != original:
+
+        raise ValueError(
+            f"{protein_change} does not match "
+            f"the UniProt sequence. "
+            f"Position {position} contains "
+            f"{actual_residue}, not {original}."
+        )
+
+    uniprot = UniProtService()
+
+    domains = await uniprot.get_domains(
+        protein
+    )
+
+    domain = MutationService.find_domain(
+        position,
+        domains
+    )
+
+    structure = MutationService.load_structure(
+        pdb_text
+    )
+
+    matches = MutationService.find_mutation_residues(
+        structure,
+        position,
+        original
+    )
+
+    if not matches:
+
+        raise ValueError(
+            f"Could not find {original}{position} "
+            f"in structure"
+        )
+    structural_results = []
+
+    for match in matches:
+        chain_id = match["chain"]
+        residue = match["residue"]
+        nearby = MutationService.find_nearby_residues(
+            structure,
+            residue,
+            radius=5.0
+        )
+
+        raw_interfaces = MutationService.find_interfaces(
+            structure,
+            cutoff=5.0
+        )
+
+        interfaces = MutationService.summarize_interfaces(
+            raw_interfaces
+        )
+
+        mutation_interfaces = (
+            MutationService.mutation_interface_context(
+                chain_id,
+                position,
+                interfaces
+            )
+        )
+
+        structural_results.append({
+            "chain": chain_id,
+
+            "residue": {
+                "name": residue.resname,
+                "position": position
+            },
+
+            "nearby_residues": nearby,
+
+            "interfaces":
+                mutation_interfaces
+        })
+
+    return {
+        "mutation": {
+            "protein_change":
+                protein_change,
+            "original":
+                original,
+            "position":
+                position,
+            "new":
+                new
+        },
+
+        "protein": {
+            "name": protein
+                .get("proteinDescription", {}),
+            "sequence_length":
+                len(sequence)
+        },
+
+        "domain": domain,
+
+        "structure": structural_results
+    }
 
 @app.get("/health")
 async def health():

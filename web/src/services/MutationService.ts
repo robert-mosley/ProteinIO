@@ -3,10 +3,10 @@ import { sessionId } from "./SessionService";
 
 
 export class MutationInfoService {
-  async MutationInfo(sequence: string, position: number, new_residue: string): Promise<any> {
+  async MutationInfo(sequence: string, protein_change: string): Promise<any> {
     try {
-      console.log("MutationInfoService called with beee", sequence, position, new_residue);
-      const response = await getMutationInfo(sequence, position, new_residue)
+      console.log("MutationInfoService called with beee", sequence, protein_change);
+      const response = await getMutationInfo(sequence, protein_change)
       return response
     } catch (error) {
       throw error
