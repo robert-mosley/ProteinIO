@@ -3,9 +3,6 @@ import { Search, Dna, AlertCircle, ExternalLink, FlaskConical } from 'lucide-rea
 import { useProtein } from '../../hooks/useProtein'
 import { Mutation } from '../../types'
 import MutationWorkspace from '../MutationWorkspace'
-import { MutationInfoService } from '../../services/MutationService'
-
-const mutationInfoService = new MutationInfoService()
 
 function sigStyle(sig: string | null | undefined): { label: string; color: string } {
   if (!sig) return { label: 'Unknown', color: 'text-slate-500 bg-slate-500/10 border-slate-500/20' }
@@ -109,11 +106,22 @@ function MutationCard({ m, selected, onClick, onDoubleClick }: CardProps) {
   )
 }
 
-export default function MutationsTab({ query }: { query: string | null }) {
+type MutationsTabProps = {
+  query: string | null
+  selectedPdb?: string | null
+  setHighlight?: (highlight: { chain: string; residue: number } | null) => void
+  setGeneratedPdb?: (pdb: string | null) => void
+}
+
+export default function MutationsTab({
+  query,
+  selectedPdb,
+  setHighlight,
+  setGeneratedPdb,
+}: MutationsTabProps) {
   const { data, isLoading } = useProtein(query)
   const [filter, setFilter] = React.useState('')
   const [selectedId, setSelectedId] = React.useState<string | null>(null)
-  const [generatedPdb, setGeneratedPdb] = React.useState<string | null>(null);
   const [workspace, setWorkspace] = React.useState<Mutation | null>(null)
 
   const all: Mutation[] = data?.mutations ?? []
@@ -127,7 +135,7 @@ export default function MutationsTab({ query }: { query: string | null }) {
         (m.source ?? '').toLowerCase().includes(filter.toLowerCase()) ||
         (m.clinical_significance ?? '').toLowerCase().includes(filter.toLowerCase()) ||
         (m.chain ?? '').toLowerCase().includes(filter.toLowerCase()) ||
-        (m.residue_number ?? '').toString().toLowerCase().includes(filter.toLowerCase())
+        (m.position ?? '').toString().toLowerCase().includes(filter.toLowerCase())
       )
     : all
 
@@ -172,7 +180,7 @@ export default function MutationsTab({ query }: { query: string | null }) {
             <span className="text-cyan-400 font-bold font-mono">{all.length}</span>
             {' '}mutation{all.length !== 1 ? 's' : ''}
             {all.length > 0 && (
-              <span className="text-slate-600 ml-1">· double-click a card to inspect</span>
+              <span className="text-slate-600 ml-1">· select a card to inspect</span>
             )}
           </div>
           {filter && items.length !== all.length && (
@@ -219,8 +227,11 @@ export default function MutationsTab({ query }: { query: string | null }) {
                   key={id}
                   m={m}
                   selected={selectedId === id}
-                  onClick={() => setSelectedId((prev) => prev === id ? null : id)}
-                  onDoubleClick={() => setWorkspace(m)}
+                   onClick={() => {
+                     setSelectedId(id)
+                     setWorkspace(m)
+                   }}
+                   onDoubleClick={() => setWorkspace(m)}
                 />
               )
             })}
@@ -231,6 +242,10 @@ export default function MutationsTab({ query }: { query: string | null }) {
       {/* Workspace drawer — rendered outside the scroll container via portal-like fixed positioning */}
       <MutationWorkspace
         mutation={workspace}
+        query={query}
+        selectedPdb={selectedPdb}
+        setHighlight={setHighlight}
+        setGeneratedPdb={setGeneratedPdb}
         onClose={() => setWorkspace(null)}
       />
     </>

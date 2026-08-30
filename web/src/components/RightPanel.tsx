@@ -11,12 +11,20 @@ type Tab = 'protein' | 'structures' | 'mutations' | 'ai'
 type Props = {
   proteinQuery: string | null
   searchVersion: number
+  selectedPdb?: string | null
   setSelectedPdb: (url: string | null) => void
   setGeneratedPdb: (pdb: string | null) => void
   setHighlight?: (highlight: { chain: string; residue: number } | null) => void
 }
 
-export default function RightPanel({ proteinQuery, searchVersion, setSelectedPdb, setGeneratedPdb, setHighlight }: Props) {
+export default function RightPanel({
+  proteinQuery,
+  searchVersion,
+  selectedPdb,
+  setSelectedPdb,
+  setGeneratedPdb,
+  setHighlight,
+}: Props) {
   const [tab, setTab] = React.useState<Tab>('protein')
   const { data } = useProtein(proteinQuery)
 
@@ -73,7 +81,14 @@ export default function RightPanel({ proteinQuery, searchVersion, setSelectedPdb
         <div className="fade-in">
           {tab === 'protein'    && <ProteinTab    query={proteinQuery} />}
           {tab === 'structures' && <StructuresTab query={proteinQuery} setSelectedPdb={setSelectedPdb} />}
-          {tab === 'mutations'  && <MutationsTab  query={proteinQuery} />}
+          {tab === 'mutations'  && (
+            <MutationsTab
+              query={proteinQuery}
+              selectedPdb={selectedPdb}
+              setHighlight={setHighlight}
+              setGeneratedPdb={setGeneratedPdb}
+            />
+          )}
           {tab === 'ai'         && <AIAssistantTab setGeneratedPdb={setGeneratedPdb} setHighlight={setHighlight} />}
         </div>
       </div>

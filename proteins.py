@@ -75,6 +75,25 @@ def parse_protein_change(protein_change: str):
             "new_residue": match.group(3),
         }
 
+    # Three-letter notation: Arg248Gln
+    three_to_one = {
+        "ALA": "A", "ARG": "R", "ASN": "N", "ASP": "D",
+        "CYS": "C", "GLN": "Q", "GLU": "E", "GLY": "G",
+        "HIS": "H", "ILE": "I", "LEU": "L", "LYS": "K",
+        "MET": "M", "PHE": "F", "PRO": "P", "SER": "S",
+        "THR": "T", "TRP": "W", "TYR": "Y", "VAL": "V",
+    }
+    match = re.fullmatch(r"([A-Za-z]{3})(\d+)([A-Za-z]{3})", change)
+    if match:
+        original = three_to_one.get(match.group(1).upper())
+        new = three_to_one.get(match.group(3).upper())
+        if original and new:
+            return {
+                "original_residue": original,
+                "position": int(match.group(2)),
+                "new_residue": new,
+            }
+
     return None    
 
 class UniProtService:

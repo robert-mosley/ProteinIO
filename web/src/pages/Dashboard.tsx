@@ -64,6 +64,7 @@ export default function Dashboard() {
         <RightPanel
           proteinQuery={query}
           searchVersion={searchVersion}
+          selectedPdb={selectedPdb}
           setSelectedPdb={setSelectedPdb}
           setGeneratedPdb={setGeneratedPdb}
           setHighlight={setHighlight}

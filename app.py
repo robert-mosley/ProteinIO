@@ -45,6 +45,13 @@ class MutationRequest(BaseModel):
     sequence: str
     protein_change: str
 
+class MutationAnalysisRequest(BaseModel):
+    query: str
+    protein_change: str
+    sequence: Optional[str] = None
+    session_id: Optional[str] = None
+    pdb: Optional[str] = None
+
 class MissenseQuery(BaseModel):
     uniprot: str
     mutation: str
@@ -313,6 +320,47 @@ async def mutation_seq(req: MutationRequest):
             "pdb_string": pdb_response.text,
         }
 
+@app.post("/analyze_mutation")
+async def analyze_mutation_endpoint(req: MutationAnalysisRequest):
+    """Return structural context for a selected mutation."""
+    try:
+        protein = await UniProtService().search(req.query)
+        if req.sequence:
+            protein["sequence"] = {
+                **protein.get("sequence", {}),
+                "value": req.sequence.replace("\n", "").replace(" ", ""),
+            }
+        pdb_source = (
+            req.pdb
+            or (session_current_pdbs.get(req.session_id) if req.session_id else None)
+            or llm_module.pdb_string
+        )
+
+        if not pdb_source:
+            raise HTTPException(
+                status_code=400,
+                detail="Select a structure before analyzing this mutation.",
+            )
+
+        if pdb_source.startswith(("http://", "https://")):
+            async with httpx.AsyncClient(timeout=30) as client:
+                pdb_response = await client.get(pdb_source)
+                pdb_response.raise_for_status()
+                pdb_text = pdb_response.text
+        else:
+            pdb_text = pdb_source
+
+        return await analyze_mutation(protein, pdb_text, req.protein_change)
+    except HTTPException:
+        raise
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except httpx.HTTPError as exc:
+        raise HTTPException(
+            status_code=502,
+            detail="Could not download the selected structure.",
+        ) from exc
+
 async def analyze_mutation(
     protein,
     pdb_text,
@@ -402,7 +450,8 @@ async def analyze_mutation(
         residue = match["residue"]
         nearby = MutationService.find_nearby_residues(
             structure,
-            residue,
+            chain_id,
+            position,
             radius=5.0
         )
 

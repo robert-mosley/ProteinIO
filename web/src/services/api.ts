@@ -1,6 +1,6 @@
-import { ChatResponse, ProteinResponse } from '../types'
+import { ChatResponse, MutationAnalysis, ProteinResponse } from '../types'
 
-const API_BASE = 'https://proteinio-1.onrender.com'
+const API_BASE = import.meta.env.DEV ? '/api' : ''
 
 class APIError extends Error {
   constructor(public status: number, message: string) {
@@ -79,6 +79,38 @@ export async function getMutationInfo(sequence: string, protein_change: string):
 
     if (!res.ok) {
       throw new APIError(res.status, 'Failed to fetch mutation info')
+    }
+
+    return res.json()
+  } catch (error) {
+    if (error instanceof APIError) throw error
+    throw new APIError(0, `Network error: ${error instanceof Error ? error.message : 'Unknown error'}`)
+  }
+}
+
+export async function analyzeMutation(
+  query: string,
+  proteinChange: string,
+  sequence: string,
+  sessionId: string,
+  pdb?: string | null,
+): Promise<MutationAnalysis> {
+  try {
+    const res = await fetch(`${API_BASE}/analyze_mutation`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        query,
+        protein_change: proteinChange,
+        sequence,
+        session_id: sessionId,
+        pdb: pdb ?? undefined,
+      }),
+    })
+
+    if (!res.ok) {
+      const body = await res.json().catch(() => null)
+      throw new APIError(res.status, body?.detail || 'Failed to analyze mutation')
     }
 
     return res.json()

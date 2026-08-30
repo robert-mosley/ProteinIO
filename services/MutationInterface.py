@@ -8,12 +8,32 @@ class MutationService:
         self.mutation = mutation
         self.uniprot = UniProtService()
 
+    @staticmethod
     def parse_mutation(protein_change: str):
+        one_letter = {
+            "ALA": "A", "ARG": "R", "ASN": "N", "ASP": "D",
+            "CYS": "C", "GLN": "Q", "GLU": "E", "GLY": "G",
+            "HIS": "H", "ILE": "I", "LEU": "L", "LYS": "K",
+            "MET": "M", "PHE": "F", "PRO": "P", "SER": "S",
+            "THR": "T", "TRP": "W", "TYR": "Y", "VAL": "V",
+        }
 
-        match = re.fullmatch(
-            r"([A-Z])(\d+)([A-Z])",
-            protein_change.upper()
-        )
+        normalized = re.sub(r"^p\.", "", protein_change.strip(), flags=re.IGNORECASE)
+        match = re.fullmatch(r"([A-Z])(\d+)([A-Z])", normalized.upper())
+        if not match:
+            match = re.fullmatch(
+                r"([A-Za-z]{3})(\d+)([A-Za-z]{3})",
+                normalized,
+            )
+            if match:
+                old = one_letter.get(match.group(1).upper())
+                new = one_letter.get(match.group(3).upper())
+                if old and new:
+                    return {
+                        "original": old,
+                        "position": int(match.group(2)),
+                        "new": new,
+                    }
 
         if not match:
             raise ValueError(
@@ -31,6 +51,7 @@ class MutationService:
         }
 
     
+    @staticmethod
     def load_structure(pdb_text: str):
 
         parser = PDBParser(QUIET=True)
@@ -42,16 +63,15 @@ class MutationService:
 
         return structure
 
-    def find_domain(self, position):
-        protein = self.uniprot.search(self.protein)
-        domains = self.uniprot.get_domains(protein)
-
+    @staticmethod
+    def find_domain(position, domains):
         for domain in domains:
             if domain["start"] <= position <= domain["end"]:
                 return domain
 
         return None
 
+    @staticmethod
     def find_mutation_residues(
         structure,
         position: int,
@@ -108,14 +128,24 @@ class MutationService:
 
         return matches
 
-    def get_nearby_residues(structure, chain_id: str, position: int, radius: float = 5.0):
+    @staticmethod
+    def find_nearby_residues(structure, chain_id: str, position: int, radius: float = 5.0):
         model = next(structure.get_models())
         chain = model[chain_id]
-        residue = chain[position]
+        residue = next(
+            (
+                candidate
+                for candidate in chain
+                if candidate.id[0] == " " and candidate.id[1] == position
+            ),
+            None,
+        )
+        if residue is None:
+            return []
 
         atoms = list(model.get_atoms())
         neighbor_search = NeighborSearch(atoms)
-        nearby = set()
+        nearby = {}
 
         for atom in residue.get_atoms():
             if atom.element == "H":
@@ -130,10 +160,25 @@ class MutationService:
             for neighbor in neighbors:
                 if neighbor is residue:
                     continue
-                nearby.add(neighbor)
+                neighbor_chain = neighbor.get_parent().get_parent().id
+                neighbor_position = neighbor.id[1]
+                key = (neighbor_chain, neighbor_position, neighbor.resname)
+                nearby[key] = {
+                    "chain": neighbor_chain,
+                    "position": neighbor_position,
+                    "residue": neighbor.resname,
+                }
 
-        return nearby
+        return sorted(
+            nearby.values(),
+            key=lambda item: (item["chain"], item["position"], item["residue"]),
+        )
 
+    @staticmethod
+    def get_nearby_residues(structure, chain_id: str, position: int, radius: float = 5.0):
+        return MutationService.find_nearby_residues(structure, chain_id, position, radius)
+
+    @staticmethod
     def find_interfaces(
         structure,
         cutoff=5.0
@@ -215,6 +260,7 @@ class MutationService:
 
         return interfaces
 
+    @staticmethod
     def summarize_interfaces(interfaces):
         results = []
         for interface in interfaces:
@@ -264,6 +310,7 @@ class MutationService:
 
         return results
 
+    @staticmethod
     def mutation_interface_context(
         mutation_chain,
         mutation_position,

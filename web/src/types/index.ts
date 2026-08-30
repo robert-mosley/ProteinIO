@@ -33,6 +33,47 @@ export interface Mutation {
   sequence: string
 }
 
+export interface NearbyResidue {
+  chain: string
+  position: number
+  residue: string
+}
+
+export interface MutationInterfaceContext {
+  interface: boolean
+  chain: string
+  partner_chain: string
+  partner_residues: NearbyResidue[]
+}
+
+export interface MutationAnalysis {
+  mutation: {
+    protein_change: string
+    original: string
+    position: number
+    new: string
+  }
+  protein: {
+    name: Record<string, unknown>
+    sequence_length: number
+  }
+  domain: {
+    name?: string
+    start: number
+    end: number
+    type?: string
+  } | null
+  structure: Array<{
+    chain: string
+    residue: {
+      name: string
+      position: number
+    }
+    nearby_residues: NearbyResidue[]
+    interfaces: MutationInterfaceContext[]
+  }>
+}
+
 /**
  * Full response from /getProtein endpoint
  */
