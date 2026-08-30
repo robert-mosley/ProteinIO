@@ -362,6 +362,16 @@ export default function MutationWorkspace({
                       {analysis.sequence_warning}
                     </div>
                   )}
+                  {analysis.analysis_warning && (
+                    <div className="p-2.5 rounded-lg bg-slate-400/10 border border-slate-300/20 text-xs text-slate-200">
+                      {analysis.analysis_warning}
+                    </div>
+                  )}
+                  {analysis.structure.length === 0 && (
+                    <div className="rounded-lg border border-[#3c5263] bg-[#121a23] p-3 text-xs text-slate-400">
+                      No physical region is available to highlight for this mutation.
+                    </div>
+                  )}
                   {analysis.structure.map((location) => (
                     <div key={`${location.chain}-${location.residue.position}`} className="space-y-3">
                       <div className="grid grid-cols-2 gap-2">

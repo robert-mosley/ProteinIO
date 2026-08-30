@@ -391,6 +391,33 @@ async def analyze_mutation_endpoint(req: MutationAnalysisRequest):
                     last_analysis_error = exc
 
         if last_analysis_error:
+            if str(last_analysis_error).startswith("Could not find"):
+                parsed = MutationService.parse_mutation(req.protein_change)
+                sequence = protein.get("sequence", {}).get("value", "")
+                domains = await UniProtService().get_domains(protein)
+                return {
+                    "mutation": {
+                        "protein_change": req.protein_change,
+                        "original": parsed["original"],
+                        "position": parsed["position"],
+                        "new": parsed["new"],
+                    },
+                    "protein": {
+                        "name": protein.get("proteinDescription", {}),
+                        "sequence_length": len(sequence),
+                    },
+                    "domain": MutationService.find_domain(
+                        parsed["position"],
+                        domains,
+                    ),
+                    "structure": [],
+                    "analysis_warning": (
+                        f"No returned structure contains {parsed['original']}"
+                        f"{parsed['position']}. The mutation details are still "
+                        "available, but Mol* cannot highlight this residue."
+                    ),
+                    "selected_pdb": None,
+                }
             raise HTTPException(
                 status_code=422,
                 detail=str(last_analysis_error),
