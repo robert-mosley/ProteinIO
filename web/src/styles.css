@@ -82,6 +82,7 @@ button {
 
 .panel-content {
   background: #111a23;
+  scrollbar-gutter: stable;
 }
 
 .workspace-shell {

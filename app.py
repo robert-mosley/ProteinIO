@@ -230,15 +230,19 @@ async def mutation_query(accession: MutationQuery, session_id: Optional[str] = N
 @app.post("/mutation")
 async def mutation_seq(req: MutationRequest):
     req.sequence = req.sequence.replace("\n", "").replace(" ", "")
-    protein_changes = [
-        change.strip()
-        for change in req.protein_change.split(",")
-        if change.strip()
-    ]
-    for protein_change in protein_changes:
-        print(protein_change[1:-1])
-        pos = int(protein_change[1:-1])
-        final_res = protein_change[-1]
+    try:
+        mutations = MutationService.parse_mutations(req.protein_change)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    for mutation in mutations:
+        pos = mutation["position"]
+        final_res = mutation["new"]
+        if pos > len(req.sequence):
+            raise HTTPException(
+                status_code=422,
+                detail=f"Mutation position {pos} is outside sequence length {len(req.sequence)}",
+            )
 
         req.sequence = (
             req.sequence[:pos - 1]
@@ -392,7 +396,8 @@ async def analyze_mutation_endpoint(req: MutationAnalysisRequest):
 
         if last_analysis_error:
             if str(last_analysis_error).startswith("Could not find"):
-                parsed = MutationService.parse_mutation(req.protein_change)
+                parsed_changes = MutationService.parse_mutations(req.protein_change)
+                parsed = parsed_changes[0]
                 sequence = protein.get("sequence", {}).get("value", "")
                 domains = await UniProtService().get_domains(protein)
                 return {
@@ -412,9 +417,13 @@ async def analyze_mutation_endpoint(req: MutationAnalysisRequest):
                     ),
                     "structure": [],
                     "analysis_warning": (
-                        f"No returned structure contains {parsed['original']}"
-                        f"{parsed['position']}. The mutation details are still "
-                        "available, but Mol* cannot highlight this residue."
+                        "No returned structure contains any of: "
+                        + ", ".join(
+                            f"{change['original']}{change['position']}{change['new']}"
+                            for change in parsed_changes
+                        )
+                        + ". The mutation details are still available, but Mol* "
+                        "cannot highlight these residues."
                     ),
                     "selected_pdb": None,
                 }
@@ -447,13 +456,11 @@ async def analyze_mutation(
     # Parse mutation
     # -------------------------
 
-    mutation = MutationService.parse_mutation(
+    mutations = MutationService.parse_mutations(
         protein_change
     )
 
-    position = mutation["position"]
-    original = mutation["original"]
-    new = mutation["new"]
+    primary_mutation = mutations[0]
 
     # -------------------------
     # Validate sequence
@@ -471,105 +478,108 @@ async def analyze_mutation(
             "Protein sequence not found"
         )
 
-    if position > len(sequence):
-
-        raise ValueError(
-            f"Mutation position {position} "
-            f"is outside sequence length "
-            f"{len(sequence)}"
-        )
-
-    actual_residue = sequence[
-        position - 1
-    ]
-
-    sequence_warning = None
-    if actual_residue != original:
-        sequence_warning = (
-            f"External annotation mismatch: UniProt position {position} "
-            f"contains {actual_residue}, not {original}."
-        )
-
     uniprot = UniProtService()
 
     domains = await uniprot.get_domains(
         protein
     )
 
-    domain = MutationService.find_domain(
-        position,
-        domains
-    )
-
     structure = MutationService.load_structure(
         pdb_text
     )
 
-    matches = MutationService.find_mutation_residues(
-        structure,
-        position,
-        original
-    )
-
-    if not matches:
-
-        raise ValueError(
-            f"Could not find {original}{position} "
-            f"in structure"
-        )
+    sequence_warnings = []
+    unmapped_mutations = []
     structural_results = []
+    primary_domain = None
 
-    for match in matches:
-        chain_id = match["chain"]
-        residue = match["residue"]
-        nearby = MutationService.find_nearby_residues(
+    for mutation in mutations:
+        position = mutation["position"]
+        original = mutation["original"]
+        if position > len(sequence):
+            raise ValueError(
+                f"Mutation position {position} is outside sequence length "
+                f"{len(sequence)}"
+            )
+
+        actual_residue = sequence[position - 1]
+        if actual_residue != original:
+            sequence_warnings.append(
+                f"External annotation mismatch: UniProt position {position} "
+                f"contains {actual_residue}, not {original}."
+            )
+
+        domain = MutationService.find_domain(position, domains)
+        if primary_domain is None:
+            primary_domain = domain
+
+        matches = MutationService.find_mutation_residues(
             structure,
-            chain_id,
-            residue.id[1],
-            radius=5.0
+            position,
+            original,
         )
+        if not matches:
+            unmapped_mutations.append(mutation)
+            continue
 
-        raw_interfaces = MutationService.find_interfaces(
-            structure,
-            cutoff=5.0
-        )
-
-        interfaces = MutationService.summarize_interfaces(
-            raw_interfaces
-        )
-
-        mutation_interfaces = (
-            MutationService.mutation_interface_context(
+        for match in matches:
+            chain_id = match["chain"]
+            residue = match["residue"]
+            nearby = MutationService.find_nearby_residues(
+                structure,
                 chain_id,
                 residue.id[1],
-                interfaces
+                radius=5.0
+            )
+
+            raw_interfaces = MutationService.find_interfaces(
+                structure,
+                cutoff=5.0
+            )
+
+            interfaces = MutationService.summarize_interfaces(
+                raw_interfaces
+            )
+
+            mutation_interfaces = (
+                MutationService.mutation_interface_context(
+                    chain_id,
+                    residue.id[1],
+                    interfaces
+                )
+            )
+
+            structural_results.append({
+                "mutation": {
+                    "original": original,
+                    "position": position,
+                    "new": mutation["new"],
+                },
+                "chain": chain_id,
+                "residue": {
+                    "name": residue.resname,
+                    "position": residue.id[1]
+                },
+                "nearby_residues": nearby,
+                "interfaces": mutation_interfaces
+            })
+
+    if not structural_results:
+        mutation = primary_mutation
+        raise ValueError(
+            "Could not find any requested mutation in structure: "
+            + ", ".join(
+                f"{item['original']}{item['position']}{item['new']}"
+                for item in mutations
             )
         )
 
-        structural_results.append({
-            "chain": chain_id,
-
-            "residue": {
-                "name": residue.resname,
-                "position": residue.id[1]
-            },
-
-            "nearby_residues": nearby,
-
-            "interfaces":
-                mutation_interfaces
-        })
-
     return {
         "mutation": {
-            "protein_change":
-                protein_change,
-            "original":
-                original,
-            "position":
-                position,
-            "new":
-                new
+            "protein_change": protein_change,
+            "original": primary_mutation["original"],
+            "position": primary_mutation["position"],
+            "new": primary_mutation["new"]
         },
 
         "protein": {
@@ -579,10 +589,18 @@ async def analyze_mutation(
                 len(sequence)
         },
 
-        "domain": domain,
+        "domain": primary_domain,
 
         "structure": structural_results,
-        "sequence_warning": sequence_warning,
+        "sequence_warning": " ".join(sequence_warnings) if sequence_warnings else None,
+        "analysis_warning": (
+            "No matching coordinates were found for: "
+            + ", ".join(
+                f"{item['original']}{item['position']}{item['new']}"
+                for item in unmapped_mutations
+            )
+            if unmapped_mutations else None
+        ),
     }
 
 @app.get("/health")

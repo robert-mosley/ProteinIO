@@ -67,6 +67,11 @@ export interface MutationAnalysis {
   analysis_warning?: string | null
   selected_pdb?: string | null
   structure: Array<{
+    mutation?: {
+      original: string
+      position: number
+      new: string
+    }
     chain: string
     residue: {
       name: string

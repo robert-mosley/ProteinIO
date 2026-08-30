@@ -51,7 +51,7 @@ export default function RightPanel({
   ]
 
   return (
-    <aside className="right-panel w-[420px] flex-shrink-0 flex flex-col border-l overflow-hidden">
+    <aside className="right-panel w-[420px] min-h-0 flex-shrink-0 flex flex-col border-l overflow-hidden">
       {/* Tab bar */}
       <div className="flex border-b border-[#2b3b4a] bg-[#0f171f] px-2 pt-2 gap-1">
         {tabs.map((t) => (
@@ -81,7 +81,7 @@ export default function RightPanel({
       </div>
 
       {/* Tab content */}
-      <div className="panel-content flex-1 overflow-y-auto p-4">
+      <div className="panel-content flex-1 min-h-0 overflow-y-auto p-4">
         <div className="fade-in">
           {tab === 'protein'    && <ProteinTab    query={proteinQuery} />}
           {tab === 'structures' && <StructuresTab query={proteinQuery} setSelectedPdb={setSelectedPdb} />}

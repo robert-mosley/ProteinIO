@@ -9,7 +9,7 @@ class MutationService:
         self.uniprot = UniProtService()
 
     @staticmethod
-    def parse_mutation(protein_change: str):
+    def _parse_single_mutation(protein_change: str):
         one_letter = {
             "ALA": "A", "ARG": "R", "ASN": "N", "ASP": "D",
             "CYS": "C", "GLN": "Q", "GLU": "E", "GLY": "G",
@@ -51,6 +51,24 @@ class MutationService:
         }
 
     
+    @staticmethod
+    def parse_mutations(protein_change: str):
+        changes = [
+            change.strip()
+            for change in re.split(r"\s*(?:,|/|;)\s*", protein_change or "")
+            if change.strip()
+        ]
+        if not changes:
+            raise ValueError(f"Invalid mutation format: {protein_change}")
+        return [MutationService._parse_single_mutation(change) for change in changes]
+
+    @staticmethod
+    def parse_mutation(protein_change: str):
+        mutations = MutationService.parse_mutations(protein_change)
+        if len(mutations) != 1:
+            raise ValueError(f"Invalid mutation format: {protein_change}")
+        return mutations[0]
+
     @staticmethod
     def load_structure(pdb_text: str):
 

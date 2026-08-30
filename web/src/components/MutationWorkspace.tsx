@@ -232,7 +232,7 @@ export default function MutationWorkspace({
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 z-40 bg-black/40 backdrop-blur-[2px] transition-opacity duration-200"
+        className="fixed inset-0 z-40 bg-black/25 transition-opacity duration-200"
         style={{ opacity: visible ? 1 : 0, pointerEvents: visible ? 'auto' : 'none' }}
         onClick={handleClose}
       />
@@ -374,6 +374,11 @@ export default function MutationWorkspace({
                   )}
                   {analysis.structure.map((location) => (
                     <div key={`${location.chain}-${location.residue.position}`} className="space-y-3">
+                      {location.mutation && (
+                        <div className="text-[10px] uppercase tracking-widest text-cyan-200">
+                          Mapped change · {location.mutation.original}{location.mutation.position}{location.mutation.new}
+                        </div>
+                      )}
                       <div className="grid grid-cols-2 gap-2">
                         <div className="rounded-lg border border-[#3c5263] bg-[#121a23] p-2.5">
                           <div className="text-[10px] uppercase tracking-wider text-slate-500">Chain</div>
