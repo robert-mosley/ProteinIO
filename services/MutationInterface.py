@@ -108,22 +108,29 @@ class MutationService:
         matches = []
 
         for chain in model.get_chains():
+            standard_residues = [
+                residue for residue in chain if residue.id[0] == " "
+            ]
 
-            for residue in chain:
+            # Prefer the PDB's explicit residue numbering.
+            candidates = [
+                residue for residue in standard_residues
+                if residue.id[1] == position
+            ]
 
-                # Standard amino acid
-                if residue.id[0] != " ":
-                    continue
+            # Structure fragments often start at a different PDB number.
+            # Fall back to sequence order so a UniProt position can still be
+            # mapped to the actual residue number used by Mol*.
+            if not candidates and position <= len(standard_residues):
+                candidates = [standard_residues[position - 1]]
 
-                if residue.id[1] != position:
-                    continue
-
+            for residue in candidates:
                 if residue.resname != expected:
                     continue
 
                 matches.append({
                     "chain": chain.id,
-                    "residue": residue
+                    "residue": residue,
                 })
 
         return matches
@@ -160,7 +167,7 @@ class MutationService:
             for neighbor in neighbors:
                 if neighbor is residue:
                     continue
-                neighbor_chain = neighbor.get_parent().get_parent().id
+                neighbor_chain = neighbor.get_parent().id
                 neighbor_position = neighbor.id[1]
                 key = (neighbor_chain, neighbor_position, neighbor.resname)
                 nearby[key] = {

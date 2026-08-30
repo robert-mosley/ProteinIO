@@ -51,6 +51,7 @@ class MutationAnalysisRequest(BaseModel):
     sequence: Optional[str] = None
     session_id: Optional[str] = None
     pdb: Optional[str] = None
+    pdbs: list[str] = []
 
 class MissenseQuery(BaseModel):
     uniprot: str
@@ -336,21 +337,42 @@ async def analyze_mutation_endpoint(req: MutationAnalysisRequest):
             or llm_module.pdb_string
         )
 
-        if not pdb_source:
+        pdb_sources = []
+        for source in [pdb_source, *req.pdbs]:
+            if source and source not in pdb_sources:
+                pdb_sources.append(source)
+
+        if not pdb_sources:
             raise HTTPException(
                 status_code=400,
                 detail="Select a structure before analyzing this mutation.",
             )
 
-        if pdb_source.startswith(("http://", "https://")):
-            async with httpx.AsyncClient(timeout=30) as client:
-                pdb_response = await client.get(pdb_source)
-                pdb_response.raise_for_status()
-                pdb_text = pdb_response.text
-        else:
-            pdb_text = pdb_source
+        last_error = None
+        for source in pdb_sources:
+            try:
+                if source.startswith(("http://", "https://")):
+                    async with httpx.AsyncClient(timeout=30) as client:
+                        pdb_response = await client.get(source)
+                        pdb_response.raise_for_status()
+                        pdb_text = pdb_response.text
+                else:
+                    pdb_text = source
 
-        return await analyze_mutation(protein, pdb_text, req.protein_change)
+                result = await analyze_mutation(
+                    protein,
+                    pdb_text,
+                    req.protein_change,
+                )
+                result["selected_pdb"] = source if source.startswith(("http://", "https://")) else None
+                return result
+            except ValueError as exc:
+                last_error = exc
+
+        raise HTTPException(
+            status_code=422,
+            detail=str(last_error or "Mutation was not found in the returned structures."),
+        )
     except HTTPException:
         raise
     except ValueError as exc:
@@ -407,13 +429,11 @@ async def analyze_mutation(
         position - 1
     ]
 
+    sequence_warning = None
     if actual_residue != original:
-
-        raise ValueError(
-            f"{protein_change} does not match "
-            f"the UniProt sequence. "
-            f"Position {position} contains "
-            f"{actual_residue}, not {original}."
+        sequence_warning = (
+            f"External annotation mismatch: UniProt position {position} "
+            f"contains {actual_residue}, not {original}."
         )
 
     uniprot = UniProtService()
@@ -451,7 +471,7 @@ async def analyze_mutation(
         nearby = MutationService.find_nearby_residues(
             structure,
             chain_id,
-            position,
+            residue.id[1],
             radius=5.0
         )
 
@@ -467,7 +487,7 @@ async def analyze_mutation(
         mutation_interfaces = (
             MutationService.mutation_interface_context(
                 chain_id,
-                position,
+                residue.id[1],
                 interfaces
             )
         )
@@ -477,7 +497,7 @@ async def analyze_mutation(
 
             "residue": {
                 "name": residue.resname,
-                "position": position
+                "position": residue.id[1]
             },
 
             "nearby_residues": nearby,
@@ -507,7 +527,8 @@ async def analyze_mutation(
 
         "domain": domain,
 
-        "structure": structural_results
+        "structure": structural_results,
+        "sequence_warning": sequence_warning,
     }
 
 @app.get("/health")

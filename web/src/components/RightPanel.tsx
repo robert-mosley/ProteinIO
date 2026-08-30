@@ -27,6 +27,10 @@ export default function RightPanel({
 }: Props) {
   const [tab, setTab] = React.useState<Tab>('protein')
   const { data } = useProtein(proteinQuery)
+  const structureUrls = React.useMemo(
+    () => data?.structures?.map((structure) => structure.download_url) ?? [],
+    [data?.structures],
+  )
 
   // Auto-load the first structure whenever results arrive for a new query
   React.useEffect(() => {
@@ -85,6 +89,8 @@ export default function RightPanel({
             <MutationsTab
               query={proteinQuery}
               selectedPdb={selectedPdb}
+              structureUrls={structureUrls}
+              setSelectedPdb={setSelectedPdb}
               setHighlight={setHighlight}
               setGeneratedPdb={setGeneratedPdb}
             />

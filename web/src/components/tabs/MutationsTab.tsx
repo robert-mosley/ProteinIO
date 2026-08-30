@@ -109,6 +109,8 @@ function MutationCard({ m, selected, onClick, onDoubleClick }: CardProps) {
 type MutationsTabProps = {
   query: string | null
   selectedPdb?: string | null
+  structureUrls?: string[]
+  setSelectedPdb?: (url: string | null) => void
   setHighlight?: (highlight: { chain: string; residue: number } | null) => void
   setGeneratedPdb?: (pdb: string | null) => void
 }
@@ -116,6 +118,8 @@ type MutationsTabProps = {
 export default function MutationsTab({
   query,
   selectedPdb,
+  structureUrls,
+  setSelectedPdb,
   setHighlight,
   setGeneratedPdb,
 }: MutationsTabProps) {
@@ -244,6 +248,8 @@ export default function MutationsTab({
         mutation={workspace}
         query={query}
         selectedPdb={selectedPdb}
+        structureUrls={structureUrls}
+        setSelectedPdb={setSelectedPdb}
         setHighlight={setHighlight}
         setGeneratedPdb={setGeneratedPdb}
         onClose={() => setWorkspace(null)}

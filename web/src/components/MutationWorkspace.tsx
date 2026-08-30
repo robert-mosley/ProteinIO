@@ -15,6 +15,8 @@ interface Props {
   onClose: () => void
   query: string | null
   selectedPdb?: string | null
+  structureUrls?: string[]
+  setSelectedPdb?: (url: string | null) => void
   setHighlight?: (highlight: Highlight | null) => void
   setGeneratedPdb?: (pdb: string | null) => void
 }
@@ -52,6 +54,8 @@ export default function MutationWorkspace({
   mutation,
   query,
   selectedPdb,
+  structureUrls = [],
+  setSelectedPdb,
   onClose,
   setHighlight,
   setGeneratedPdb,
@@ -111,10 +115,20 @@ export default function MutationWorkspace({
     setAnalysisError(null)
     setAnalysisLoading(true)
 
-    analyzeMutation(query, mutation.protein_change, mutation.sequence, sessionId, selectedPdb)
+    analyzeMutation(
+      query,
+      mutation.protein_change,
+      mutation.sequence,
+      sessionId,
+      selectedPdb,
+      structureUrls,
+    )
       .then((result) => {
         if (cancelled) return
         setAnalysis(result)
+        if (result.selected_pdb && result.selected_pdb !== selectedPdb) {
+          setSelectedPdb?.(result.selected_pdb)
+        }
         const location = result.structure?.[0]
         if (location) {
           setHighlight?.({
@@ -134,7 +148,16 @@ export default function MutationWorkspace({
     return () => {
       cancelled = true
     }
-  }, [mutation?.accession, mutation?.protein_change, mutation?.sequence, query, selectedPdb, setHighlight])
+  }, [
+    mutation?.accession,
+    mutation?.protein_change,
+    mutation?.sequence,
+    query,
+    selectedPdb,
+    structureUrls,
+    setHighlight,
+    setSelectedPdb,
+  ])
 
   // Fetch a live AI summary whenever the mutation changes.
   React.useEffect(() => {
@@ -307,6 +330,11 @@ export default function MutationWorkspace({
 
               {!analysisLoading && !analysisError && analysis && (
                 <div className="space-y-4">
+                  {analysis.sequence_warning && (
+                    <div className="p-2.5 rounded-lg bg-amber-400/10 border border-amber-300/20 text-xs text-amber-100">
+                      {analysis.sequence_warning}
+                    </div>
+                  )}
                   {analysis.structure.map((location) => (
                     <div key={`${location.chain}-${location.residue.position}`} className="space-y-3">
                       <div className="grid grid-cols-2 gap-2">

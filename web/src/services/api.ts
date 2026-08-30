@@ -94,6 +94,7 @@ export async function analyzeMutation(
   sequence: string,
   sessionId: string,
   pdb?: string | null,
+  pdbs: string[] = [],
 ): Promise<MutationAnalysis> {
   try {
     const res = await fetch(`${API_BASE}/analyze_mutation`, {
@@ -105,6 +106,7 @@ export async function analyzeMutation(
         sequence,
         session_id: sessionId,
         pdb: pdb ?? undefined,
+        pdbs,
       }),
     })
 

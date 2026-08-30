@@ -63,6 +63,8 @@ export interface MutationAnalysis {
     end: number
     type?: string
   } | null
+  sequence_warning?: string | null
+  selected_pdb?: string | null
   structure: Array<{
     chain: string
     residue: {
