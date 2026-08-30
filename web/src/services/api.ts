@@ -109,6 +109,7 @@ export async function analyzeMutation(
         pdbs,
       }),
     })
+    console.log("completed")
 
     if (!res.ok) {
       const body = await res.json().catch(() => null)

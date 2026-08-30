@@ -573,6 +573,7 @@ async def analyze_mutation(
                 for item in mutations
             )
         )
+    print(protein_change)
 
     return {
         "mutation": {
