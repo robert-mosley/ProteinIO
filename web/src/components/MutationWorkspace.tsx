@@ -1,5 +1,5 @@
 import React from 'react'
-import { X, Dna, FlaskConical, BrainCircuit, ExternalLink, Crosshair, AlertCircle } from 'lucide-react'
+import { X, Dna, FlaskConical, BrainCircuit, ExternalLink, Crosshair, AlertCircle, Loader2 } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import { Mutation, MutationAnalysis } from '../types'
 import { chatService } from '../services/ChatService'
@@ -68,6 +68,8 @@ export default function MutationWorkspace({
   const [analysis, setAnalysis] = React.useState<MutationAnalysis | null>(null)
   const [analysisLoading, setAnalysisLoading] = React.useState(false)
   const [analysisError, setAnalysisError] = React.useState<string | null>(null)
+  const [modelLoading, setModelLoading] = React.useState(false)
+  const [modelError, setModelError] = React.useState<string | null>(null)
 
   const sequence = mutation?.sequence || 'Unknown sequence'
 
@@ -80,6 +82,26 @@ export default function MutationWorkspace({
     setHighlight?.(null)
     onClose()
   }, [onClose, setHighlight])
+
+  const handleLoadMutant = React.useCallback(async () => {
+    if (!mutation) return
+    setModelLoading(true)
+    setModelError(null)
+    try {
+      const info = await mutationInfoService.MutationInfo(
+        mutation.sequence,
+        mutation.protein_change,
+      )
+      if (!info?.pdb_string) {
+        throw new Error('The mutant structure service did not return a structure.')
+      }
+      setGeneratedPdb?.(info.pdb_string)
+    } catch (err: unknown) {
+      setModelError(err instanceof Error ? err.message : 'Unable to load the mutant structure')
+    } finally {
+      setModelLoading(false)
+    }
+  }, [mutation, setGeneratedPdb])
 
   // Close on Escape
   React.useEffect(() => {
@@ -226,9 +248,14 @@ export default function MutationWorkspace({
             <Dna className="w-4 h-4 text-cyan-500/70" />
           </div>
           <div className="flex-1 min-w-0">
-            <div className="text-xs font-semibold text-white">Mutation Workspace</div>
+            <div className="flex items-center gap-2">
+              <div className="text-xs font-semibold text-white">Selected Mutation</div>
+              <span className="px-1.5 py-0.5 rounded border border-cyan-300/30 bg-cyan-300/10 text-[9px] uppercase tracking-wider font-semibold text-cyan-100">
+                Active
+              </span>
+            </div>
             <div className="text-[10px] text-slate-500 font-mono truncate">
-              {mutation?.accession || '—'}
+              {mutation?.protein_change || mutation?.accession || '—'}
             </div>
           </div>
           <button
@@ -413,18 +440,21 @@ export default function MutationWorkspace({
               )}
 
               <button
-                  onClick={() => mutationInfoService.MutationInfo(mutation.sequence, mutation.protein_change).then((info) => {
-                    console.log(mutation.sequence)
-                    console.log(mutation.protein_change)
-                    console.log("Mutation info fetched:", info)
-                     if (info?.pdb_string) {
-                       setGeneratedPdb?.(info.pdb_string)
-                    }
-                  })}
-                   className="w-full mt-4 px-3 py-2 rounded-lg bg-[#121a23] border border-[#3c5263] text-sm text-slate-200 hover:bg-[#1d2a36] hover:border-cyan-300/40 transition-colors"
+                onClick={handleLoadMutant}
+                disabled={modelLoading}
+                className="w-full mt-4 px-3 py-2 rounded-lg bg-[#121a23] border border-[#3c5263] text-sm text-slate-200 hover:bg-[#1d2a36] hover:border-cyan-300/40 disabled:opacity-60 disabled:cursor-wait transition-colors"
                 >
-                   Load mutant structure
+                <span className="inline-flex items-center justify-center gap-2">
+                  {modelLoading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                  {modelLoading ? 'Loading mutant structure…' : 'Load mutant structure'}
+                </span>
               </button>
+              {modelError && (
+                <div className="flex gap-2 mt-2 p-2.5 rounded-lg bg-amber-400/10 border border-amber-300/20">
+                  <AlertCircle className="w-4 h-4 text-amber-300 flex-shrink-0 mt-0.5" />
+                  <div className="text-xs text-amber-100">{modelError}</div>
+                </div>
+              )}
             </div>
 
             {/* AI Analysis */}

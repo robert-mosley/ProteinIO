@@ -74,11 +74,23 @@ button {
   background: #0f171f;
 }
 
+.right-panel {
+  flex: 0 0 420px;
+  width: 420px;
+  min-width: 420px;
+}
+
 .panel-content {
   background: #111a23;
 }
 
 .workspace-shell {
+  min-height: 0;
+  min-width: 0;
+}
+
+.center-viewer {
+  min-width: 0;
   min-height: 0;
 }
 
@@ -138,7 +150,9 @@ button {
 
 @media (max-width: 1100px) {
   .right-panel {
+    flex-basis: 360px;
     width: 360px;
+    min-width: 360px;
   }
 }
 
@@ -154,7 +168,9 @@ button {
   }
 
   .right-panel {
+    flex: none;
     width: 100%;
+    min-width: 0;
     min-height: 420px;
     border-left: 0;
     border-top: 1px solid var(--io-border);

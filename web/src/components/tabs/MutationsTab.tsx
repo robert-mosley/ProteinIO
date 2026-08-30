@@ -1,5 +1,5 @@
 import React from 'react'
-import { Search, Dna, AlertCircle, ExternalLink, FlaskConical } from 'lucide-react'
+import { Search, Dna, AlertCircle, ExternalLink, FlaskConical, CheckCircle2 } from 'lucide-react'
 import { useProtein } from '../../hooks/useProtein'
 import { Mutation } from '../../types'
 import MutationWorkspace from '../MutationWorkspace'
@@ -38,15 +38,25 @@ function MutationCard({ m, selected, onClick, onDoubleClick }: CardProps) {
     <div
       onClick={onClick}
       onDoubleClick={onDoubleClick}
-      title="Double-click to open workspace"
+      role="button"
+      tabIndex={0}
+      aria-pressed={selected}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault()
+          onClick()
+        }
+      }}
+      title="Select mutation to inspect"
       className={`
         surface-card rounded-xl border overflow-hidden cursor-pointer select-none
         transition-all duration-150 fade-in group
         ${selected
-          ? 'border-cyan-500/50 ring-1 ring-cyan-500/20 shadow-[0_0_12px_rgba(6,182,212,0.08)]'
+          ? 'border-cyan-200/80 bg-[#1b3540] ring-2 ring-cyan-300/30 shadow-[0_0_18px_rgba(84,214,208,0.16)]'
           : 'border-[#2b3b4a] hover:border-[#3c5263] hover:shadow-md hover:shadow-black/30'}
       `}
     >
+      {selected && <div className="h-0.5 bg-cyan-300" />}
       {/* Card body */}
       <div className="p-3.5">
         <div className="flex items-start gap-2.5">
@@ -67,6 +77,12 @@ function MutationCard({ m, selected, onClick, onDoubleClick }: CardProps) {
                 <FlaskConical className="w-3 h-3" />
                 {m.source}
               </span>
+              {selected && (
+                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded border border-cyan-200/40 bg-cyan-300/10 text-[10px] font-semibold text-cyan-100">
+                  <CheckCircle2 className="w-3 h-3" />
+                  Selected
+                </span>
+              )}
             </div>
 
             {/* Title */}
@@ -84,9 +100,9 @@ function MutationCard({ m, selected, onClick, onDoubleClick }: CardProps) {
         </code>
 
         <div className="flex items-center gap-2">
-          {/* Double-click hint */}
-          <span className="text-[9px] text-slate-700 group-hover:text-slate-600 transition-colors hidden group-hover:inline">
-            double-click to open
+          {/* Selection hint */}
+          <span className="text-[9px] text-slate-600 group-hover:text-slate-400 transition-colors hidden group-hover:inline">
+            click to inspect
           </span>
 
           {m.accession && (
@@ -191,6 +207,20 @@ export default function MutationsTab({
             <div className="text-[10px] text-slate-400">{items.length} matching</div>
           )}
         </div>
+
+        {workspace && (
+          <div className="flex items-center gap-2.5 rounded-xl border border-cyan-200/50 bg-cyan-300/10 px-3 py-2.5">
+            <CheckCircle2 className="w-4 h-4 flex-shrink-0 text-cyan-200" />
+            <div className="min-w-0">
+              <div className="text-[10px] uppercase tracking-widest font-semibold text-cyan-100">
+                Selected mutation
+              </div>
+              <code className="block truncate text-xs font-mono text-white mt-0.5">
+                {workspace.protein_change || workspace.title || workspace.accession || 'Mutation record'}
+              </code>
+            </div>
+          </div>
+        )}
 
         {/* Filter */}
         {all.length > 0 && (

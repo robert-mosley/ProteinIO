@@ -25,7 +25,7 @@ export default function CenterViewer({ query, selectedPdb, generatedPdb, highlig
 
 
   return (
-    <div className="flex-1 p-4 overflow-hidden">
+    <div className="center-viewer flex-1 p-4 overflow-hidden">
       <div className="viewer-shell h-full rounded-2xl border grid-bg relative overflow-hidden flex flex-col">
         {/* Top bar */}
         <div className="viewer-toolbar flex items-center gap-3 px-4 py-3 border-b backdrop-blur-sm">

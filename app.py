@@ -342,36 +342,63 @@ async def analyze_mutation_endpoint(req: MutationAnalysisRequest):
             if source and source not in pdb_sources:
                 pdb_sources.append(source)
 
+        # Experimental PDB entries are often short domain fragments. Use the
+        # matching AlphaFold model as a final fallback for mutations that are
+        # outside every returned experimental fragment.
+        uniprot_accession = protein.get("primaryAccession")
+        if uniprot_accession:
+            alphafold_url = (
+                "https://alphafold.ebi.ac.uk/files/"
+                f"AF-{uniprot_accession}-F1-model_v6.pdb"
+            )
+            if alphafold_url not in pdb_sources:
+                pdb_sources.append(alphafold_url)
+
         if not pdb_sources:
             raise HTTPException(
                 status_code=400,
                 detail="Select a structure before analyzing this mutation.",
             )
 
-        last_error = None
-        for source in pdb_sources:
-            try:
-                if source.startswith(("http://", "https://")):
-                    async with httpx.AsyncClient(timeout=30) as client:
+        last_analysis_error = None
+        download_errors = []
+        async with httpx.AsyncClient(
+            timeout=60,
+            follow_redirects=True,
+            headers={"User-Agent": "ProteinIO/1.0"},
+        ) as client:
+            for source in pdb_sources:
+                try:
+                    if source.startswith(("http://", "https://")):
                         pdb_response = await client.get(source)
                         pdb_response.raise_for_status()
                         pdb_text = pdb_response.text
-                else:
-                    pdb_text = source
+                    else:
+                        pdb_text = source
+                except httpx.HTTPError as exc:
+                    download_errors.append(str(exc))
+                    continue
 
-                result = await analyze_mutation(
-                    protein,
-                    pdb_text,
-                    req.protein_change,
-                )
-                result["selected_pdb"] = source if source.startswith(("http://", "https://")) else None
-                return result
-            except ValueError as exc:
-                last_error = exc
+                try:
+                    result = await analyze_mutation(
+                        protein,
+                        pdb_text,
+                        req.protein_change,
+                    )
+                    result["selected_pdb"] = source if source.startswith(("http://", "https://")) else None
+                    return result
+                except ValueError as exc:
+                    last_analysis_error = exc
+
+        if last_analysis_error:
+            raise HTTPException(
+                status_code=422,
+                detail=str(last_analysis_error),
+            )
 
         raise HTTPException(
-            status_code=422,
-            detail=str(last_error or "Mutation was not found in the returned structures."),
+            status_code=502,
+            detail="None of the returned structures could be downloaded.",
         )
     except HTTPException:
         raise
