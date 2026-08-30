@@ -1,6 +1,6 @@
 import { ChatResponse, MutationAnalysis, ProteinResponse } from '../types'
 
-const API_BASE = import.meta.env.DEV ? '/api' : ''
+const API_BASE = 'https://proteinio-1.onrender.com'
 
 class APIError extends Error {
   constructor(public status: number, message: string) {
