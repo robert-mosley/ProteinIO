@@ -72,18 +72,11 @@ class MutationService:
 
     @staticmethod
     def load_structure(pdb_text: str):
-
         parser = PDBParser(QUIET=True)
-
         structure = parser.get_structure(
             "protein",
             io.StringIO(pdb_text)
         )
-
-        del parser
-        del structure
-
-        gc.collect()
 
         return structure
 
