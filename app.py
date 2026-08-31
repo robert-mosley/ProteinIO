@@ -556,10 +556,10 @@ async def analyze_mutation(
                 "nearby_residues": nearby,
                 "interfaces": mutation_interfaces
             })
+
+            del interfaces
+            del raw_interfaces
     del structure
-    if interfaces:
-        del raw_interfaces
-        del interfaces
     del nearby
     del mutation_interfaces
 
