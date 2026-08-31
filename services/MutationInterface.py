@@ -1,6 +1,7 @@
 from Bio.PDB import NeighborSearch, PDBParser
 import io
 from proteins import *
+import gc
 
 class MutationService:
     def __init__(self, protein, mutation):
@@ -78,6 +79,11 @@ class MutationService:
             "protein",
             io.StringIO(pdb_text)
         )
+
+        del parser
+        del structure
+
+        gc.collect()
 
         return structure
 

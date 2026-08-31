@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Optional
 import time
 from services.MutationInterface import *
+import gc
 
 app = FastAPI()
 
@@ -346,9 +347,6 @@ async def analyze_mutation_endpoint(req: MutationAnalysisRequest):
             if source and source not in pdb_sources:
                 pdb_sources.append(source)
 
-        # Experimental PDB entries are often short domain fragments. Use the
-        # matching AlphaFold model as a final fallback for mutations that are
-        # outside every returned experimental fragment.
         uniprot_accession = protein.get("primaryAccession")
         if uniprot_accession:
             alphafold_url = (
@@ -563,6 +561,7 @@ async def analyze_mutation(
                 "nearby_residues": nearby,
                 "interfaces": mutation_interfaces
             })
+    del structure
 
     if not structural_results:
         mutation = primary_mutation
@@ -574,6 +573,8 @@ async def analyze_mutation(
             )
         )
     print(protein_change)
+
+    gc.collect()
 
     return {
         "mutation": {
