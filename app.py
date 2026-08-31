@@ -153,10 +153,12 @@ async def chat(question: ChatQuery):
                             try:
                                 pockets_data = {"chain": chain, "residue": int(res_num)}
                             except ValueError:
+                                del raw_pockets
                                 print(f"Could not parse residue number from: {res_num}")
         elif isinstance(raw_pockets, dict):
             pockets_list = [raw_pockets]
             residue_ids = raw_pockets.get("residue_ids", "")
+            del raw_pockets
             if residue_ids:
                 first_residue = residue_ids.split()[0]
                 if "_" in first_residue:
@@ -392,6 +394,9 @@ async def analyze_mutation_endpoint(req: MutationAnalysisRequest):
                 except ValueError as exc:
                     last_analysis_error = exc
 
+        del pdb_text
+        del raw_pockets
+
         if last_analysis_error:
             if str(last_analysis_error).startswith("Could not find"):
                 parsed_changes = MutationService.parse_mutations(req.protein_change)
@@ -485,6 +490,8 @@ async def analyze_mutation(
     structure = MutationService.load_structure(
         pdb_text
     )
+    raw_interfaces = MutationService.find_interfaces(structure,cutoff=5.0)    
+    interfaces = MutationService.summarize_interfaces(raw_interfaces)
 
     sequence_warnings = []
     unmapped_mutations = []
@@ -520,10 +527,6 @@ async def analyze_mutation(
             unmapped_mutations.append(mutation)
             continue
 
-        raw_interfaces = MutationService.find_interfaces(structure,cutoff=5.0)
-        
-        interfaces = MutationService.summarize_interfaces(raw_interfaces)
-
         for match in matches:
             chain_id = match["chain"]
             residue = match["residue"]
@@ -556,12 +559,7 @@ async def analyze_mutation(
                 "nearby_residues": nearby,
                 "interfaces": mutation_interfaces
             })
-
-            del interfaces
-            del raw_interfaces
     del structure
-    del nearby
-    del mutation_interfaces
 
     if not structural_results:
         mutation = primary_mutation
