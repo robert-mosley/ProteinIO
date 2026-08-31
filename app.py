@@ -520,6 +520,10 @@ async def analyze_mutation(
             unmapped_mutations.append(mutation)
             continue
 
+        raw_interfaces = MutationService.find_interfaces(structure,cutoff=5.0)
+        
+        interfaces = MutationService.summarize_interfaces(raw_interfaces)
+
         for match in matches:
             chain_id = match["chain"]
             residue = match["residue"]
@@ -528,15 +532,6 @@ async def analyze_mutation(
                 chain_id,
                 residue.id[1],
                 radius=5.0
-            )
-
-            raw_interfaces = MutationService.find_interfaces(
-                structure,
-                cutoff=5.0
-            )
-
-            interfaces = MutationService.summarize_interfaces(
-                raw_interfaces
             )
 
             mutation_interfaces = (

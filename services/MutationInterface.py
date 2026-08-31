@@ -77,24 +77,8 @@ class MutationService:
             "protein",
             io.StringIO(pdb_text)
         )
-
-        extracted_data = []
-        for model in structure:
-            for chain in model:
-                for residue in chain:
-                    for atom in residue:
-                        extracted_data.append({
-                            "atom_name": atom.get_name(),
-                            "residue_name": residue.get_resname(),
-                            "chain_id": chain.get_id(),
-                            "coord": atom.get_coord().tolist()
-                        })
-
-        del structure
-        del parser
-        gc.collect()
         
-        return extracted_data
+        return structure
 
     @staticmethod
     def find_domain(position, domains):
