@@ -372,6 +372,7 @@ async def analyze_mutation_endpoint(req: MutationAnalysisRequest):
             headers={"User-Agent": "ProteinIO/1.0"},
         ) as client:
             for source in pdb_sources:
+                pdb_text = None
                 try:
                     if source.startswith(("http://", "https://")):
                         pdb_response = await client.get(source)
@@ -390,12 +391,14 @@ async def analyze_mutation_endpoint(req: MutationAnalysisRequest):
                         req.protein_change,
                     )
                     result["selected_pdb"] = source if source.startswith(("http://", "https://")) else None
+                    pdb_text = None  # Clear PDB text from memory
+                    gc.collect()  # Aggressive cleanup after successful analysis
                     return result
                 except ValueError as exc:
                     last_analysis_error = exc
-
-        del pdb_text
-        print("done")
+                finally:
+                    pdb_text = None  # Ensure PDB text is freed even on error
+                    gc.collect()
 
         if last_analysis_error:
             if str(last_analysis_error).startswith("Could not find"):
@@ -403,7 +406,6 @@ async def analyze_mutation_endpoint(req: MutationAnalysisRequest):
                 parsed = parsed_changes[0]
                 sequence = protein.get("sequence", {}).get("value", "")
                 domains = await UniProtService().get_domains(protein)
-                print("done completed")
                 return {
                     "mutation": {
                         "protein_change": req.protein_change,
@@ -449,6 +451,8 @@ async def analyze_mutation_endpoint(req: MutationAnalysisRequest):
             status_code=502,
             detail="Could not download the selected structure.",
         ) from exc
+    finally:
+        gc.collect()  # Final cleanup
 
 async def analyze_mutation(protein, pdb_text, protein_change):
 
@@ -478,7 +482,9 @@ async def analyze_mutation(protein, pdb_text, protein_change):
     structure = MutationService.load_structure(
         pdb_text
     )
-    raw_interfaces = MutationService.find_interfaces(structure,cutoff=5.0)    
+    
+    # Extract interface data early, then clear structure
+    raw_interfaces = MutationService.find_interfaces(structure, cutoff=5.0)    
     interfaces = MutationService.summarize_interfaces(raw_interfaces)
 
     sequence_warnings = []
@@ -547,7 +553,10 @@ async def analyze_mutation(protein, pdb_text, protein_change):
                 "nearby_residues": nearby,
                 "interfaces": mutation_interfaces
             })
+    
     del structure
+    del raw_interfaces
+    gc.collect()
 
     if not structural_results:
         mutation = primary_mutation
@@ -558,9 +567,6 @@ async def analyze_mutation(protein, pdb_text, protein_change):
                 for item in mutations
             )
         )
-    print(protein_change)
-
-    gc.collect()
 
     return {
         "mutation": {

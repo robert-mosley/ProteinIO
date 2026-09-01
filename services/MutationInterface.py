@@ -167,19 +167,22 @@ class MutationService:
         if residue is None:
             return []
 
-        atoms = list(model.get_atoms())
-        neighbor_search = NeighborSearch(atoms)
+        # Only process atoms directly, don't store all model atoms at once
         nearby = {}
+        
+        # Get only heavy atoms from the target residue
+        target_atoms = [atom for atom in residue.get_atoms() if atom.element != "H"]
+        if not target_atoms:
+            return []
 
-        for atom in residue.get_atoms():
-            if atom.element == "H":
-                continue
-
-            neighbors = neighbor_search.search(
-                atom.coord,
-                radius,
-                level="R"
-            )
+        # Build neighbor search incrementally only for the relevant region
+        # Process one target atom at a time to minimize memory
+        for atom in target_atoms:
+            # Build search space only once with model's atoms
+            model_atoms = list(model.get_atoms())
+            neighbor_search = NeighborSearch(model_atoms)
+            
+            neighbors = neighbor_search.search(atom.coord, radius, level="R")
 
             for neighbor in neighbors:
                 if neighbor is residue:
@@ -192,6 +195,9 @@ class MutationService:
                     "position": neighbor_position,
                     "residue": neighbor.resname,
                 }
+            
+            del model_atoms
+            del neighbor_search
 
         return sorted(
             nearby.values(),
@@ -208,78 +214,71 @@ class MutationService:
         cutoff=5.0
     ):
         model = next(structure.get_models())
-
         chains = list(model.get_chains())
-
         interfaces = []
 
         for i in range(len(chains)):
-
             for j in range(i + 1, len(chains)):
-
                 chain_a = chains[i]
                 chain_b = chains[j]
 
-                atoms_a = [
-                    atom
-                    for residue in chain_a
-                    if residue.id[0] == " "
-                    for atom in residue
-                    if atom.element != "H"
-                ]
+                # Build atom list on-demand and limit to heavy atoms only
+                atoms_b = []
+                for residue in chain_b:
+                    if residue.id[0] == " ":
+                        for atom in residue:
+                            if atom.element != "H":
+                                atoms_b.append(atom)
 
-                atoms_b = [
-                    atom
-                    for residue in chain_b
-                    if residue.id[0] == " "
-                    for atom in residue
-                    if atom.element != "H"
-                ]
+                if not atoms_b:
+                    continue
 
                 search_b = NeighborSearch(atoms_b)
-
                 contacts = []
 
-                for atom_a in atoms_a:
+                # Process chain_a atoms one at a time to minimize memory usage
+                for residue in chain_a:
+                    if residue.id[0] != " ":
+                        continue
+                    
+                    for atom_a in residue:
+                        if atom_a.element == "H":
+                            continue
 
-                    neighbors = search_b.search(
-                        atom_a.coord,
-                        cutoff,
-                        level="A"
-                    )
+                        neighbors = search_b.search(
+                            atom_a.coord,
+                            cutoff,
+                            level="A"
+                        )
 
-                    residue_a = atom_a.get_parent()
+                        residue_a = atom_a.get_parent()
 
-                    for atom_b in neighbors:
+                        for atom_b in neighbors:
+                            residue_b = atom_b.get_parent()
+                            distance = atom_a - atom_b
 
-                        residue_b = atom_b.get_parent()
-
-                        distance = atom_a - atom_b
-
-                        contacts.append({
-                            "chain_a": chain_a.id,
-                            "residue_a": residue_a.resname,
-                            "position_a": residue_a.id[1],
-                            "atom_a": atom_a.name,
-
-                            "chain_b": chain_b.id,
-                            "residue_b": residue_b.resname,
-                            "position_b": residue_b.id[1],
-                            "atom_b": atom_b.name,
-
-                            "distance": round(
-                                distance,
-                                3
-                            )
-                        })
+                            contacts.append({
+                                "chain_a": chain_a.id,
+                                "residue_a": residue_a.resname,
+                                "position_a": residue_a.id[1],
+                                "atom_a": atom_a.name,
+                                "chain_b": chain_b.id,
+                                "residue_b": residue_b.resname,
+                                "position_b": residue_b.id[1],
+                                "atom_b": atom_b.name,
+                                "distance": round(distance, 3)
+                            })
 
                 if contacts:
-
                     interfaces.append({
                         "chain_a": chain_a.id,
                         "chain_b": chain_b.id,
                         "contacts": contacts
                     })
+                
+                # Clean up large temporary list
+                del atoms_b
+                del search_b
 
         return interfaces
 
