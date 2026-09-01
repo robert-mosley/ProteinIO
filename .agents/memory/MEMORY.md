@@ -1,1 +1,0 @@
-- [Mutation structure mapping](mutation-structure-mapping.md) — use the selected mutation sequence and try returned structures because upstream ClinVar/UniProt results can disagree.
