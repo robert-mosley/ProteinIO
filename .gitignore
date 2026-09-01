@@ -1,5 +1,6 @@
 RFdiffusion/
 venv/
+.agents/memory
 web/node_modules/
 web/dist/
 __pycache__/
