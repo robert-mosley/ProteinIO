@@ -345,7 +345,9 @@ async def analyze_mutation_endpoint(req: MutationAnalysisRequest):
         )
 
         pdb_sources = []
-        for source in [pdb_source, *req.pdbs]:
+        if pdb_source:
+            pdb_sources.append(pdb_source)
+        for source in req.pdbs[:1]:
             if source and source not in pdb_sources:
                 pdb_sources.append(source)
 
@@ -364,14 +366,14 @@ async def analyze_mutation_endpoint(req: MutationAnalysisRequest):
                 detail="Select a structure before analyzing this mutation.",
             )
 
+        # Only one structure is processed to avoid memory blow-ups on Render.
         last_analysis_error = None
-        download_errors = []
         async with httpx.AsyncClient(
             timeout=60,
             follow_redirects=True,
             headers={"User-Agent": "ProteinIO/1.0"},
         ) as client:
-            for source in pdb_sources:
+            for source in pdb_sources[:1]:
                 try:
                     if source.startswith(("http://", "https://")):
                         pdb_response = await client.get(source)
@@ -380,7 +382,7 @@ async def analyze_mutation_endpoint(req: MutationAnalysisRequest):
                     else:
                         pdb_text = source
                 except httpx.HTTPError as exc:
-                    download_errors.append(str(exc))
+                    last_analysis_error = exc
                     continue
 
                 try:
@@ -390,12 +392,10 @@ async def analyze_mutation_endpoint(req: MutationAnalysisRequest):
                         req.protein_change,
                     )
                     result["selected_pdb"] = source if source.startswith(("http://", "https://")) else None
+                    gc.collect()
                     return result
                 except ValueError as exc:
                     last_analysis_error = exc
-
-        del pdb_text
-        del raw_pockets
 
         if last_analysis_error:
             if str(last_analysis_error).startswith("Could not find"):
@@ -437,7 +437,7 @@ async def analyze_mutation_endpoint(req: MutationAnalysisRequest):
 
         raise HTTPException(
             status_code=502,
-            detail="None of the returned structures could be downloaded.",
+            detail="The selected structure could not be analyzed.",
         )
     except HTTPException:
         raise
@@ -476,13 +476,11 @@ async def analyze_mutation(
     )
 
     if not sequence:
-
         raise ValueError(
             "Protein sequence not found"
         )
 
     uniprot = UniProtService()
-
     domains = await uniprot.get_domains(
         protein
     )
@@ -490,8 +488,10 @@ async def analyze_mutation(
     structure = MutationService.load_structure(
         pdb_text
     )
-    raw_interfaces = MutationService.find_interfaces(structure,cutoff=5.0)    
-    interfaces = MutationService.summarize_interfaces(raw_interfaces)
+
+    # Avoid the full inter-chain interface scan in the request path.
+    # That work is expensive and spikes memory on Render.
+    interfaces = []
 
     sequence_warnings = []
     unmapped_mutations = []
@@ -534,16 +534,18 @@ async def analyze_mutation(
                 structure,
                 chain_id,
                 residue.id[1],
-                radius=5.0
+                radius=5.0,
             )
 
-            mutation_interfaces = (
-                MutationService.mutation_interface_context(
-                    chain_id,
-                    residue.id[1],
-                    interfaces
+            mutation_interfaces = []
+            if interfaces:
+                mutation_interfaces = (
+                    MutationService.mutation_interface_context(
+                        chain_id,
+                        residue.id[1],
+                        interfaces,
+                    )
                 )
-            )
 
             structural_results.append({
                 "mutation": {
@@ -557,9 +559,10 @@ async def analyze_mutation(
                     "position": residue.id[1]
                 },
                 "nearby_residues": nearby,
-                "interfaces": mutation_interfaces
+                "interfaces": mutation_interfaces,
             })
     del structure
+    gc.collect()
 
     if not structural_results:
         mutation = primary_mutation
@@ -570,9 +573,6 @@ async def analyze_mutation(
                 for item in mutations
             )
         )
-    print(protein_change)
-
-    gc.collect()
 
     return {
         "mutation": {
@@ -590,7 +590,6 @@ async def analyze_mutation(
         },
 
         "domain": primary_domain,
-
         "structure": structural_results,
         "sequence_warning": " ".join(sequence_warnings) if sequence_warnings else None,
         "analysis_warning": (

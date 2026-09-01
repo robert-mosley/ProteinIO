@@ -207,7 +207,6 @@ class MutationService:
         structure,
         cutoff=5.0
     ):
-
         model = next(structure.get_models())
 
         chains = list(model.get_chains())
