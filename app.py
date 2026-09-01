@@ -451,26 +451,13 @@ async def analyze_mutation_endpoint(req: MutationAnalysisRequest):
             detail="Could not download the selected structure.",
         ) from exc
 
-async def analyze_mutation(
-    protein,
-    pdb_text,
-    protein_change
-):
-
-    # -------------------------
-    # Parse mutation
-    # -------------------------
+async def analyze_mutation(protein, pdb_text, protein_change):
 
     mutations = MutationService.parse_mutations(
         protein_change
     )
 
     primary_mutation = mutations[0]
-
-    # -------------------------
-    # Validate sequence
-    # -------------------------
-
     sequence = (
         protein
         .get("sequence", {})
