@@ -395,7 +395,6 @@ async def analyze_mutation_endpoint(req: MutationAnalysisRequest):
                     last_analysis_error = exc
 
         del pdb_text
-        del raw_pockets
         print("done")
 
         if last_analysis_error:
