@@ -65,6 +65,9 @@ class CurrentPdbQuery(BaseModel):
     pdb: str
     session_id: Optional[str] = None
 
+class MutationSummaryQuery(BaseModel):
+    message: str
+
 @app.post("/getProtein")
 async def get_protein(protein: ProteinQuery):
     res = await ProteinService().search(protein.query)
@@ -596,6 +599,29 @@ async def analyze_mutation(protein, pdb_text, protein_change):
             if unmapped_mutations else None
         ),
     }
+
+@app.post("/mutation_summary")
+async def mutation_summary(message: MutationSummaryQuery):
+    # ask llm
+    state = {
+        "messages": [HumanMessage(content=message.message)],
+        "llm_calls": 0,
+        "session_id": None,
+        "pdb": None,
+        "current_pdb": None,
+    }
+    response = await agent.ainvoke(state)
+    result = response["messages"][-1].content
+
+    if isinstance(result, list):
+        response_text = "".join(
+            part.get("text", "") for part in result if isinstance(part, dict) and part.get("text")
+        )
+    elif isinstance(result, str):
+        response_text = result
+    else:
+        response_text = str(result)
+    return {"summary": response_text}
 
 @app.get("/health")
 async def health():

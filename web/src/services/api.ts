@@ -1,6 +1,6 @@
 import { ChatResponse, MutationAnalysis, ProteinResponse } from '../types'
 
-const API_BASE = 'https://proteinio-1.onrender.com'
+const API_BASE = '/api'
 
 class APIError extends Error {
   constructor(public status: number, message: string) {
@@ -42,6 +42,25 @@ export async function postChat(message: string, sessionId: string): Promise<Chat
 
     if (!res.ok) {
       throw new APIError(res.status, 'Failed to send chat message')
+    }
+
+    return res.json()
+  } catch (error) {
+    if (error instanceof APIError) throw error
+    throw new APIError(0, `Network error: ${error instanceof Error ? error.message : 'Unknown error'}`)
+  }
+}
+
+export async function getMutationSummary(message: string): Promise<ChatResponse> {
+  try {
+    const res = await fetch(`${API_BASE}/mutation_summary`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ "message": message})
+    })
+
+    if (!res.ok) {
+      throw new APIError(res.status, 'Failed to get mutation summary')
     }
 
     return res.json()

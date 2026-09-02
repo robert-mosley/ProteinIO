@@ -4,7 +4,7 @@ import ReactMarkdown from 'react-markdown'
 import { Mutation, MutationAnalysis } from '../types'
 import { chatService } from '../services/ChatService'
 import { MutationInfoService } from '../services/MutationService'
-import { analyzeMutation } from '../services/api'
+import { analyzeMutation, getMutationSummary } from '../services/api'
 import { sessionId } from '../services/SessionService'
 
 const mutationInfoService = new MutationInfoService()
@@ -207,11 +207,10 @@ export default function MutationWorkspace({
       .filter(Boolean)
       .join('\n')
 
-    chatService
-      .sendMessage(prompt)
+    getMutationSummary(prompt)
       .then((response) => {
         if (cancelled) return
-        setSummary(response?.response ?? null)
+        setSummary(response?.summary ?? null)
       })
       .catch((err: unknown) => {
         if (cancelled) return
@@ -225,7 +224,6 @@ export default function MutationWorkspace({
     return () => {
       cancelled = true
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mutation?.accession])
 
   return (

@@ -276,7 +276,6 @@ class MutationService:
                         "contacts": contacts
                     })
                 
-                # Clean up large temporary list
                 del atoms_b
                 del search_b
 
