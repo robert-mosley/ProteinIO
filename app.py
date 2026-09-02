@@ -604,7 +604,7 @@ async def analyze_mutation(protein, pdb_text, protein_change):
 async def mutation_summary(message: MutationSummaryQuery):
     # ask llm
     state = {
-        "messages": [HumanMessage(content=message.message)],
+        "messages": ["Don't use tools " + HumanMessage(content=message.message)],
         "llm_calls": 0,
         "session_id": None,
         "pdb": None,
